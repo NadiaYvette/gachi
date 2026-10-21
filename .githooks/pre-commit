@@ -1,0 +1,33 @@
+#!/bin/sh
+# .githooks/pre-commit: mechanically enforce tagref integrity prior to commit.
+#
+# Enforces:
+# - Zero duplicate tags
+# - Zero dangling references
+#
+# Install: git config core.hooksPath .githooks
+# Disable: git commit --no-verify
+
+set -eu
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
+if [ -x "${REPO_ROOT}/bin/gachi-tagref" ]; then
+  if ! "${REPO_ROOT}/bin/gachi-tagref"; then
+    printf '\npre-commit: Tagref cross-reference check failed.\n' >&2
+    printf 'pre-commit: Fix duplicate tags or dangling [ref:<slug>] references before committing.\n' >&2
+    printf 'pre-commit: (Use `git commit --no-verify` only if explicitly bypassing hooks).\n' >&2
+    exit 1
+  fi
+fi
+
+if [ -x "${REPO_ROOT}/bin/gachi-linkcheck" ]; then
+  if ! "${REPO_ROOT}/bin/gachi-linkcheck" --quiet; then
+    printf '\npre-commit: Markdown link & anchor check failed.\n' >&2
+    printf 'pre-commit: Fix broken relative links or invalid anchors before committing.\n' >&2
+    printf 'pre-commit: (Use `git commit --no-verify` only if explicitly bypassing hooks).\n' >&2
+    exit 1
+  fi
+fi
+
+exit 0

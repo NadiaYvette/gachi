@@ -1,0 +1,70 @@
+#!/bin/sh
+# commit-msg: enforce sarutahiko AI-attribution convention.
+#
+# Conventional format:
+#     Assisted-by: <Tool> (<Provider> / <Model>)
+#     Orchestrated-by: <Engine>
+#
+# Examples:
+#     Assisted-by: Antigravity (Anthropic / claude-4.6-opus)
+#     Assisted-by: Freebuff
+#     Orchestrated-by: Yamaarashi Flow Task Runner
+#
+# Constraints:
+# - An AI assistant CANNOT be credited via Co-authored-by: or Co-developed-by:
+#   (an AI tool cannot hold copyright or certify the DCO).
+# - An AI assistant CANNOT be credited via Signed-off-by: (only humans sign off).
+# - Robot emojis are rejected.
+#
+# Install:  git config core.hooksPath .githooks
+# Disable:  git commit --no-verify
+
+set -u
+
+msg_file=$1
+[ -f "$msg_file" ] || exit 0
+
+trailers=$(git interpret-trailers --parse < "$msg_file" 2>/dev/null) || exit 0
+
+status=0
+err() { printf 'commit-msg: %s\n' "$*" >&2; status=1; }
+
+# 1. Robot emoji is decoration that several upstreams now reject outright.
+if grep -q '🤖' "$msg_file"; then
+	err "robot emoji in message; it carries no information and is rejected by upstream. Delete it."
+fi
+
+# 2. Generated-by: is not standard.
+if printf '%s\n' "$trailers" | grep -qi '^[[:space:]]*Generated-by:'; then
+	err "Generated-by: is not the convention here. Use 'Assisted-by: <Tool> (<Provider> / <Model>)' instead."
+fi
+
+# 3. Co-authored-by / Co-developed-by / Signed-off-by naming an assistant claims
+#    authorship or DCO sign-off that only a human can certify.
+ai_names='copilot|chatgpt|gpt-[0-9]|codex|cursor|gemini|llama|qwen|deepseek|mistral|claude|anthropic|openai|aider|devin|codebuff|freebuff|buffy|space[ _-]?bunny|antigravity|noreply@|\[bot\]|@bot\b'
+if printf '%s\n' "$trailers" \
+	| grep -Ei "^[[:space:]]*(Co-authored-by|Co-developed-by|Signed-off-by):.*($ai_names)"; then
+	err "Co-authored-by:/Co-developed-by:/Signed-off-by: naming an AI tool. An assistant cannot be a co-author or certify the DCO. Use 'Assisted-by: <Tool> (<Provider> / <Model>)' instead."
+fi
+
+# 4. Assisted-by: must be non-empty when present.
+if printf '%s\n' "$trailers" | grep -qi '^[[:space:]]*Assisted-by:'; then
+	printf '%s\n' "$trailers" | grep -i '^[[:space:]]*Assisted-by:' | while read -r line; do
+		value=${line#*:}
+		val_trimmed=$(echo "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+		if [ -z "$val_trimmed" ]; then
+			printf 'commit-msg: Assisted-by: trailer cannot be empty. Format: Assisted-by: <Tool> (<Provider> / <Model>)\n' >&2
+			exit 1
+		fi
+	done || status=1
+fi
+
+# 5. Absence is not an error: a purely human commit needs no trailer.
+if [ -z "$(printf '%s\n' "$trailers" | grep -i '^[[:space:]]*Assisted-by:')" ]; then
+	if [ "$(git config --bool commit.warnMissingAssistedBy || echo false)" = true ]; then
+		printf 'commit-msg: no Assisted-by: trailer.\n' >&2
+		printf 'commit-msg: required only if an AI assistant tool took part in the change.\n' >&2
+	fi
+fi
+
+exit $status

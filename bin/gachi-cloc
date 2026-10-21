@@ -1,0 +1,468 @@
+#!/usr/bin/env python3
+"""
+bin/gargamelle-cloc — Comment Density Audit Harness for Gargamelle
+
+Evaluates in-code comment density across packages/ per package and across the whole repository,
+tracking and enforcing progress toward the 50%+ comment density target specified in
+DOCUMENTATION_ROLLOUT_PLAN.md §5 and Milestone 3.5.
+
+Enforces:
+  - Repository-wide regression check (--check with configurable --min-density threshold)
+  - Detailed per-package reporting across production source (src/) and test suites (test/)
+  - Progress tracking and gap analysis toward 50.0%+ target density
+  - Machine-readable JSON output (--json) and compact CI one-line summaries (--quiet)
+  - Deterministic Python fallback counter when cloc binary is not in PATH
+"""
+
+import sys
+import os
+import glob
+import json
+import math
+import shutil
+import argparse
+import subprocess
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# ANSI color codes
+USE_COLOR = sys.stdout.isatty() and "NO_COLOR" not in os.environ
+
+def c(text, color_code):
+    if not USE_COLOR:
+        return text
+    return f"\033[{color_code}m{text}\033[0m"
+
+def green(text): return c(text, "32")
+def yellow(text): return c(text, "33")
+def red(text): return c(text, "31")
+def blue(text): return c(text, "34")
+def cyan(text): return c(text, "36")
+def bold(text): return c(text, "1")
+def dim(text): return c(text, "2")
+
+def count_hs_lines_fallback(filepath):
+    """
+    Pure Python line-counter for Haskell source files.
+    Used when the cloc binary is not available.
+    """
+    blank = 0
+    comment = 0
+    code = 0
+    in_block = 0
+    with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            stripped = line.strip()
+            if not stripped:
+                blank += 1
+                continue
+
+            i = 0
+            has_code = False
+            has_comment = False
+            l = len(stripped)
+            while i < l:
+                if in_block > 0:
+                    if stripped[i:i+2] == "-}":
+                        in_block -= 1
+                        i += 2
+                        has_comment = True
+                    elif stripped[i:i+2] == "{-":
+                        in_block += 1
+                        i += 2
+                        has_comment = True
+                    else:
+                        i += 1
+                        has_comment = True
+                else:
+                    if stripped[i:i+2] == "--":
+                        has_comment = True
+                        break
+                    elif stripped[i:i+2] == "{-":
+                        in_block += 1
+                        i += 2
+                        has_comment = True
+                    elif stripped[i] == '"':
+                        has_code = True
+                        i += 1
+                        while i < l and stripped[i] != '"':
+                            if stripped[i] == '\\':
+                                i += 2
+                            else:
+                                i += 1
+                        i += 1
+                    else:
+                        has_code = True
+                        i += 1
+            if has_code:
+                code += 1
+            elif has_comment:
+                comment += 1
+            else:
+                blank += 1
+    return {"blank": blank, "comment": comment, "code": code, "language": "Haskell"}
+
+def run_cloc_analysis(repo_root, package_filter=None):
+    """
+    Collects per-file line counts. Uses `cloc --by-file --json packages/` if available,
+    otherwise falls back to count_hs_lines_fallback on all .hs files.
+    """
+    file_stats = {}
+    cloc_bin = shutil.which("cloc")
+    packages_dir = os.path.join(repo_root, "packages")
+
+    if cloc_bin:
+        try:
+            cmd = [cloc_bin, "--by-file", "--json", "packages/"]
+            raw = subprocess.check_output(cmd, cwd=repo_root, text=True, stderr=subprocess.DEVNULL)
+            parsed = json.loads(raw)
+            for path, stats in parsed.items():
+                if path in ("header", "SUM"):
+                    continue
+                if stats.get("language") == "Haskell":
+                    file_stats[path] = {
+                        "blank": stats.get("blank", 0),
+                        "comment": stats.get("comment", 0),
+                        "code": stats.get("code", 0)
+                    }
+        except Exception:
+            file_stats = {}
+
+    if not file_stats:
+        # Fallback to pure Python counting
+        for root, _, files in os.walk(packages_dir):
+            for file in files:
+                if file.endswith(".hs"):
+                    abs_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(abs_path, repo_root)
+                    res = count_hs_lines_fallback(abs_path)
+                    file_stats[rel_path] = {
+                        "blank": res["blank"],
+                        "comment": res["comment"],
+                        "code": res["code"]
+                    }
+
+    return file_stats
+
+def compute_density(comment, code):
+    total = comment + code
+    if total == 0:
+        return 0.0
+    return (comment / total) * 100.0
+
+def compute_gap(comment, code, target_pct):
+    if code == 0:
+        return 0
+    t = target_pct / 100.0
+    if t >= 1.0:
+        return 0
+    needed_total_comments = math.ceil((t / (1.0 - t)) * code)
+    return max(0, needed_total_comments - comment)
+
+def aggregate_stats(file_stats, target_pct=50.0, src_only=False, package_filter=None):
+    """
+    Aggregates per-file stats into package-level, src/test-level, and global totals.
+    """
+    packages = {}
+    # Discover all packages in packages/
+    packages_dir = os.path.join(REPO_ROOT, "packages")
+    for item in sorted(os.listdir(packages_dir)):
+        pkg_path = os.path.join(packages_dir, item)
+        if os.path.isdir(pkg_path) and os.path.isfile(os.path.join(pkg_path, f"{item}.cabal")):
+            if package_filter and item not in package_filter:
+                continue
+            packages[item] = {
+                "all": {"files": 0, "blank": 0, "comment": 0, "code": 0},
+                "src": {"files": 0, "blank": 0, "comment": 0, "code": 0},
+                "test": {"files": 0, "blank": 0, "comment": 0, "code": 0}
+            }
+
+    for path, stats in file_stats.items():
+        parts = path.replace("\\", "/").split("/")
+        if len(parts) >= 2 and parts[0] == "packages":
+            pkg = parts[1]
+            if pkg not in packages:
+                continue
+            is_test = "/test/" in path or path.endswith("test/Main.hs")
+            if src_only and is_test:
+                continue
+
+            target_bucket = "test" if is_test else "src"
+            for bucket in ("all", target_bucket):
+                packages[pkg][bucket]["files"] += 1
+                packages[pkg][bucket]["blank"] += stats["blank"]
+                packages[pkg][bucket]["comment"] += stats["comment"]
+                packages[pkg][bucket]["code"] += stats["code"]
+
+    # Compute overall aggregates
+    overall_all = {"files": 0, "blank": 0, "comment": 0, "code": 0}
+    overall_src = {"files": 0, "blank": 0, "comment": 0, "code": 0}
+    overall_test = {"files": 0, "blank": 0, "comment": 0, "code": 0}
+
+    for pkg_name, data in packages.items():
+        for key, bucket in [("all", overall_all), ("src", overall_src), ("test", overall_test)]:
+            bucket["files"] += data[key]["files"]
+            bucket["blank"] += data[key]["blank"]
+            bucket["comment"] += data[key]["comment"]
+            bucket["code"] += data[key]["code"]
+
+        # Compute densities & gaps
+        for k in ("all", "src", "test"):
+            b = data[k]
+            b["density_pct"] = compute_density(b["comment"], b["code"])
+            b["gap_to_target"] = compute_gap(b["comment"], b["code"], target_pct)
+
+    for bucket in (overall_all, overall_src, overall_test):
+        bucket["density_pct"] = compute_density(bucket["comment"], bucket["code"])
+        bucket["gap_to_target"] = compute_gap(bucket["comment"], bucket["code"], target_pct)
+
+    return packages, overall_all, overall_src, overall_test
+
+def render_progress_bar(pct, target_pct=50.0, width=24):
+    ratio = min(1.0, max(0.0, pct / target_pct))
+    filled = int(round(ratio * width))
+    if filled == width:
+        bar = "=" * width
+    elif filled > 0:
+        bar = "=" * (filled - 1) + ">" + "-" * (width - filled)
+    else:
+        bar = "-" * width
+    return f"[{bar}]"
+
+def render_table(packages, overall_all, overall_src, overall_test, target_pct, min_density):
+    header = (
+        f"{'Package':<24} | {'Files':>5} | {'Blank':>5} | {'Comment':>7} | {'Code':>6} | "
+        f"{'Density (All)':>13} | {'Density (Src)':>13} | {'Gap to Target':>14}"
+    )
+    divider = "-" * len(header)
+    double_divider = "=" * len(header)
+
+    lines = []
+    lines.append(double_divider)
+    lines.append(header)
+    lines.append(divider)
+
+    for pkg_name, data in sorted(packages.items()):
+        all_b = data["all"]
+        src_b = data["src"]
+
+        all_pct_str = f"{all_b['density_pct']:5.1f}%"
+        src_pct_str = f"{src_b['density_pct']:5.1f}%"
+
+        all_cell = f"{all_pct_str:>13}"
+        src_cell = f"{src_pct_str:>13}"
+
+        # Color coding
+        if all_b["density_pct"] >= target_pct:
+            all_pct_disp = green(all_cell)
+        elif all_b["density_pct"] >= min_density:
+            all_pct_disp = yellow(all_cell)
+        else:
+            all_pct_disp = red(all_cell)
+
+        if src_b["density_pct"] >= target_pct:
+            src_pct_disp = green(src_cell)
+        elif src_b["density_pct"] >= min_density:
+            src_pct_disp = yellow(src_cell)
+        else:
+            src_pct_disp = red(src_cell)
+
+        gap_str = f"+{all_b['gap_to_target']:,} lines" if all_b["gap_to_target"] > 0 else "TARGET MET"
+        gap_cell = f"{gap_str:>14}"
+        gap_disp = green(gap_cell) if all_b["gap_to_target"] == 0 else dim(gap_cell)
+
+        row = (
+            f"{pkg_name:<24} | {all_b['files']:>5} | {all_b['blank']:>5} | {all_b['comment']:>7,} | {all_b['code']:>6,} | "
+            f"{all_pct_disp} | {src_pct_disp} | {gap_disp}"
+        )
+        lines.append(row)
+
+    lines.append(divider)
+
+    # Totals
+    tot_files = f"{overall_all['files']:>5}"
+    tot_blank = f"{overall_all['blank']:>5}"
+    tot_comment = f"{overall_all['comment']:>7,}"
+    tot_code = f"{overall_all['code']:>6,}"
+
+    all_pct_str = f"{overall_all['density_pct']:5.1f}%"
+    src_pct_str = f"{overall_src['density_pct']:5.1f}%"
+    all_cell = f"{all_pct_str:>13}"
+    src_cell = f"{src_pct_str:>13}"
+
+    all_pct_disp = bold(yellow(all_cell) if overall_all["density_pct"] < target_pct else green(all_cell))
+    src_pct_disp = bold(yellow(src_cell) if overall_src["density_pct"] < target_pct else green(src_cell))
+    gap_str = f"+{overall_all['gap_to_target']:,} lines" if overall_all["gap_to_target"] > 0 else "TARGET MET"
+    gap_cell = f"{gap_str:>14}"
+    gap_disp = bold(dim(gap_cell))
+
+    tot_label = f"{'TOTAL (Haskell)':<24}"
+    total_row = (
+        f"{bold(tot_label)} | {bold(tot_files)} | {bold(tot_blank)} | "
+        f"{bold(tot_comment)} | {bold(tot_code)} | "
+        f"{all_pct_disp} | {src_pct_disp} | {gap_disp}"
+    )
+    lines.append(total_row)
+    lines.append(double_divider)
+
+    # Breakdown summary
+    lines.append("")
+    src_pct_label = f"{overall_src['density_pct']:.1f}%"
+    test_pct_label = f"{overall_test['density_pct']:.1f}%"
+    lines.append(
+        f"  • Production Source ({cyan('src/')}): {overall_src['comment']:,} comments / {overall_src['code']:,} code lines "
+        f"({bold(src_pct_label)} comment density; gap: +{overall_src['gap_to_target']:,} lines)"
+    )
+    lines.append(
+        f"  • Test Suites       ({cyan('test/')}): {overall_test['comment']:,} comments / {overall_test['code']:,} code lines "
+        f"({bold(test_pct_label)} comment density; gap: +{overall_test['gap_to_target']:,} lines)"
+    )
+
+    pbar = render_progress_bar(overall_all["density_pct"], target_pct)
+    status_label = green("PASS (Target Met)") if overall_all["density_pct"] >= target_pct else (
+        yellow("PROGRESSING") if overall_all["density_pct"] >= min_density else red("FAIL (Below Minimum Threshold)")
+    )
+
+    all_pct_label = f"{overall_all['density_pct']:.1f}%"
+    lines.append("")
+    lines.append(f"Progress toward {target_pct:.1f}% Target: {pbar} {bold(all_pct_label)}")
+    lines.append(f"Status: {status_label} (Current: {all_pct_label}, Target: {target_pct:.1f}%, Min Gate: {min_density:.1f}%)")
+    if overall_all["gap_to_target"] > 0:
+        lines.append(
+            f"Note: Progress advances organically across Phase 2 monographs, GHC Notes, and Phase 4 5-volume treatise co-development."
+        )
+
+    return "\n".join(lines)
+
+def main():
+    global USE_COLOR
+    parser = argparse.ArgumentParser(
+        description="Comment Density Audit Harness for Gargamelle (Milestone 3.5)"
+    )
+    parser.add_argument(
+        "--check", action="store_true",
+        help="Run as verification gate; exits with code 1 if density is below --min-density"
+    )
+    parser.add_argument(
+        "--min-density", type=float, default=25.0,
+        help="Minimum required comment density percentage for --check gate (default: 25.0)"
+    )
+    parser.add_argument(
+        "--target-density", type=float, default=50.0,
+        help="Target comment density percentage (default: 50.0)"
+    )
+    parser.add_argument(
+        "--package", action="append", dest="packages",
+        help="Audit specific package(s). Can be specified multiple times."
+    )
+    parser.add_argument(
+        "--src-only", action="store_true",
+        help="Audit only production src/ directories, excluding test suites"
+    )
+    parser.add_argument(
+        "--json", action="store_true",
+        help="Output structured JSON report"
+    )
+    parser.add_argument(
+        "-q", "--quiet", action="store_true",
+        help="Output compact one-line summary for CI or embedders"
+    )
+    parser.add_argument(
+        "--no-color", action="store_true",
+        help="Disable ANSI color output"
+    )
+
+    args = parser.parse_args()
+    if args.no_color:
+        USE_COLOR = False
+
+    file_stats = run_cloc_analysis(REPO_ROOT, package_filter=args.packages)
+    packages, overall_all, overall_src, overall_test = aggregate_stats(
+        file_stats, target_pct=args.target_density, src_only=args.src_only, package_filter=args.packages
+    )
+
+    evaluated_density = overall_src["density_pct"] if args.src_only else overall_all["density_pct"]
+
+    if args.json:
+        report = {
+            "target_density_pct": args.target_density,
+            "min_density_pct": args.min_density,
+            "src_only": args.src_only,
+            "evaluated_density_pct": round(evaluated_density, 2),
+            "gate_passed": evaluated_density >= args.min_density,
+            "target_reached": evaluated_density >= args.target_density,
+            "overall": {
+                "files": overall_all["files"],
+                "blank": overall_all["blank"],
+                "comment": overall_all["comment"],
+                "code": overall_all["code"],
+                "density_pct": round(overall_all["density_pct"], 2),
+                "gap_to_target": overall_all["gap_to_target"]
+            },
+            "src": {
+                "files": overall_src["files"],
+                "blank": overall_src["blank"],
+                "comment": overall_src["comment"],
+                "code": overall_src["code"],
+                "density_pct": round(overall_src["density_pct"], 2),
+                "gap_to_target": overall_src["gap_to_target"]
+            },
+            "test": {
+                "files": overall_test["files"],
+                "blank": overall_test["blank"],
+                "comment": overall_test["comment"],
+                "code": overall_test["code"],
+                "density_pct": round(overall_test["density_pct"], 2),
+                "gap_to_target": overall_test["gap_to_target"]
+            },
+            "packages": {
+                name: {
+                    "all": {
+                        "files": data["all"]["files"],
+                        "blank": data["all"]["blank"],
+                        "comment": data["all"]["comment"],
+                        "code": data["all"]["code"],
+                        "density_pct": round(data["all"]["density_pct"], 2),
+                        "gap_to_target": data["all"]["gap_to_target"]
+                    },
+                    "src": {
+                        "files": data["src"]["files"],
+                        "blank": data["src"]["blank"],
+                        "comment": data["src"]["comment"],
+                        "code": data["src"]["code"],
+                        "density_pct": round(data["src"]["density_pct"], 2),
+                        "gap_to_target": data["src"]["gap_to_target"]
+                    },
+                    "test": {
+                        "files": data["test"]["files"],
+                        "blank": data["test"]["blank"],
+                        "comment": data["test"]["comment"],
+                        "code": data["test"]["code"],
+                        "density_pct": round(data["test"]["density_pct"], 2),
+                        "gap_to_target": data["test"]["gap_to_target"]
+                    }
+                }
+                for name, data in sorted(packages.items())
+            }
+        }
+        print(json.dumps(report, indent=2))
+    elif args.quiet:
+        pkg_count = len(packages)
+        summary_line = (
+            f"{evaluated_density:.1f}% ({overall_all['comment']:,} comments / {overall_all['code']:,} code lines; "
+            f"src: {overall_src['density_pct']:.1f}%; {pkg_count} packages; target: {args.target_density:.1f}%+)"
+        )
+        print(summary_line)
+    else:
+        print(render_table(packages, overall_all, overall_src, overall_test, args.target_density, args.min_density))
+
+    if args.check and evaluated_density < args.min_density:
+        sys.stderr.write(
+            f"\nError: Comment density {evaluated_density:.1f}% is below minimum threshold {args.min_density:.1f}%!\n"
+        )
+        sys.exit(1)
+
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()

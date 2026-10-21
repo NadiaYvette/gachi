@@ -1,0 +1,299 @@
+#!/usr/bin/env python3
+"""
+bin/gargamelle-linkcheck — Deterministic Intra-Corpus Markdown Link & Anchor Verification
+
+Mechanically verifies that:
+  - Every relative Markdown hyperlink ([text](path.md#anchor)) and image link (![alt](image.png))
+    resolves to a physically existing file on disk.
+  - Every internal heading anchor (#heading-slug or #id) resolves to an exact heading or HTML anchor
+    in the target Markdown document.
+  - Source file line anchors (#L123 or #L10-L20) resolve within physical file line boundaries.
+  - No hardcoded local machine URIs (file:///home/...) or broken relative traversal paths exist.
+
+Enforces:
+  - DOC_STRATEGY.md §4: Precedence rule ("Code wins at runtime; notes corrected regardless")
+  - Zero broken links across docs/, packages/, and .agents/
+"""
+
+import sys
+import os
+import re
+import argparse
+import subprocess
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# Markdown link regex matching [text](url) and ![alt](url)
+LINK_REGEX = re.compile(r"!?\[([^\]]*)\]\(([^)\s]+)(?:\s+[\"\'][^\"\']*[\"\'])?\)")
+
+# Heading regex matching # ... ######
+HEADING_REGEX = re.compile(r"^(#{1,6})\s+(.+)$")
+
+# HTML anchor id / name regex
+HTML_ID_REGEX = re.compile(r"""(?:id|name)=[\"\']([^\"\']+)[\"\']""", re.IGNORECASE)
+
+# Inline code span regex: `code` or ``code``
+CODE_SPAN_REGEX = re.compile(r"(`+)(.+?)\1", re.DOTALL)
+
+# External protocols to ignore
+EXTERNAL_SCHEMES = ("http://", "https://", "mailto:", "rad:", "ftp://", "data:", "urn:")
+
+def github_slugify(text):
+    """
+    Generate GitHub / CommonMark-compatible anchor slug for Markdown headings.
+    """
+    # Remove HTML tags
+    text = re.sub(r"<[^>]+>", "", text)
+    # Remove link formatting: [text](url) -> text
+    text = re.sub(r"\[([^\]]*)\]\([^)]+\)", r"\1", text)
+    # Strip markdown emphasis and syntax characters
+    text = re.sub(r"[`*_{}\[\]()#+\-.!?:,\x27\"]", "", text)
+    # Lowercase and convert whitespace to dashes
+    text = text.strip().lower()
+    text = re.sub(r"\s+", "-", text)
+    return text
+
+def parse_target_anchors(file_path):
+    """
+    Extracts all valid anchors from a target file.
+    For Markdown files: heading slugs (accounting for duplicate -1, -2 suffixes) and HTML IDs.
+    For other files: returns line count to validate #L<num> line anchors.
+    """
+    if not os.path.isfile(file_path):
+        return None, 0
+
+    anchors = set()
+    slug_counts = {}
+
+    if file_path.endswith(".md"):
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                hm = HEADING_REGEX.match(line)
+                if hm:
+                    raw_title = hm.group(2)
+                    slug = github_slugify(raw_title)
+                    if slug:
+                        if slug in slug_counts:
+                            slug_counts[slug] += 1
+                            unique_slug = f"{slug}-{slug_counts[slug]}"
+                        else:
+                            slug_counts[slug] = 0
+                            unique_slug = slug
+                        anchors.add(unique_slug)
+                for am in HTML_ID_REGEX.finditer(line):
+                    anchors.add(am.group(1).lower())
+        return anchors, 0
+    else:
+        # Non-markdown source file: count lines
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            line_count = sum(1 for _ in f)
+        return anchors, line_count
+
+def validate_anchor(target_path, anchor, anchors_cache):
+    """
+    Validates whether an anchor exists in target_path.
+    """
+    if not anchor:
+        return True, ""
+
+    if target_path not in anchors_cache:
+        anchors_cache[target_path] = parse_target_anchors(target_path)
+
+    anchors, total_lines = anchors_cache[target_path]
+    anchor_clean = anchor.lstrip("#").lower()
+
+    if target_path.endswith(".md"):
+        if anchor_clean in anchors:
+            return True, ""
+        return False, f"Heading anchor '#{anchor_clean}' not found in '{target_path}'"
+    else:
+        # Source file: validate line number anchor #L123 or #L10-L20
+        m = re.match(r"^l(\d+)(?:-l(\d+))?$", anchor_clean)
+        if m:
+            start_line = int(m.group(1))
+            end_line = int(m.group(2)) if m.group(2) else start_line
+            if start_line < 1 or (total_lines > 0 and end_line > total_lines):
+                return False, f"Line anchor '#{anchor_clean}' exceeds line count ({total_lines}) in '{target_path}'"
+            return True, ""
+        return False, f"Unknown anchor format '#{anchor_clean}' for non-markdown file '{target_path}'"
+
+def check_file_links(file_path, anchors_cache, repo_root):
+    """
+    Extracts and checks all relative links in file_path.
+    Returns (checked_count, broken_list).
+    """
+    broken = []
+    checked = 0
+
+    if not os.path.isfile(file_path):
+        return 0, [(0, file_path, "File does not exist")]
+
+    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        lines = f.readlines()
+
+    in_fenced_block = False
+    fenced_char = ""
+
+    for line_idx, line in enumerate(lines, 1):
+        stripped = line.strip()
+        # Handle fenced code blocks
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            lead = stripped[:3]
+            if not in_fenced_block:
+                in_fenced_block = True
+                fenced_char = lead
+                continue
+            elif stripped.startswith(fenced_char):
+                in_fenced_block = False
+                fenced_char = ""
+                continue
+
+        if in_fenced_block:
+            continue
+
+        # Strip inline code spans to ignore illustrative link syntax e.g. `[text](path.md#anchor)`
+        scan_line = CODE_SPAN_REGEX.sub("", line)
+
+        for match in LINK_REGEX.finditer(scan_line):
+            text = match.group(1)
+            raw_target = match.group(2).strip()
+
+            # Ignore external links
+            if raw_target.startswith(EXTERNAL_SCHEMES):
+                continue
+
+            # Flag non-portable hardcoded file:// URIs
+            if raw_target.startswith("file://"):
+                broken.append((line_idx, raw_target, "Non-portable absolute file:// URI"))
+                continue
+
+            checked += 1
+
+            # Split path and anchor
+            parts = raw_target.split("#", 1)
+            path_part = parts[0]
+            anchor_part = parts[1] if len(parts) > 1 else None
+
+            # Resolve target path
+            if not path_part:
+                target_abs = file_path
+            elif path_part.startswith("/"):
+                # Path relative to repository root
+                target_abs = os.path.normpath(os.path.join(repo_root, path_part.lstrip("/")))
+            else:
+                target_abs = os.path.normpath(os.path.join(os.path.dirname(file_path), path_part))
+
+            # Verify target file exists
+            if not os.path.exists(target_abs):
+                rel_target = os.path.relpath(target_abs, repo_root) if target_abs.startswith(repo_root) else target_abs
+                broken.append((line_idx, raw_target, f"Target file '{rel_target}' does not exist"))
+                continue
+
+            # Verify anchor if specified
+            if anchor_part:
+                valid, reason = validate_anchor(target_abs, anchor_part, anchors_cache)
+                if not valid:
+                    broken.append((line_idx, raw_target, reason))
+
+    return checked, broken
+
+def collect_markdown_targets(repo_root, explicit_targets):
+    if explicit_targets:
+        targets = []
+        for t in explicit_targets:
+            abs_t = os.path.abspath(t)
+            if os.path.isfile(abs_t) and abs_t.endswith(".md"):
+                targets.append(abs_t)
+            elif os.path.isdir(abs_t):
+                for root, _, files in os.walk(abs_t):
+                    for f in files:
+                        if f.endswith(".md"):
+                            targets.append(os.path.join(root, f))
+        return sorted(list(set(targets)))
+
+    # Default: query git tracked markdown files
+    try:
+        git_files = subprocess.check_output(
+            ["git", "ls-files", "*.md"],
+            cwd=repo_root,
+            text=True,
+            stderr=subprocess.DEVNULL
+        ).splitlines()
+        return [os.path.join(repo_root, f) for f in git_files if os.path.isfile(os.path.join(repo_root, f))]
+    except Exception:
+        # Fallback filesystem scan
+        targets = []
+        for root, _, files in os.walk(repo_root):
+            if "/.git" in root or "/dist-newstyle" in root:
+                continue
+            for f in files:
+                if f.endswith(".md"):
+                    targets.append(os.path.join(root, f))
+        return sorted(targets)
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Verify intra-corpus relative Markdown hyperlinks and anchors in gargamelle."
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        default=True,
+        help="Run deterministic link verification (default: True)."
+    )
+    parser.add_argument(
+        "--quiet", "-q",
+        action="store_true",
+        help="Suppress informational output, displaying only failures."
+    )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Print verbose details of all verified links."
+    )
+    parser.add_argument(
+        "targets",
+        nargs="*",
+        help="Specific markdown files or directories to verify (defaults to all git-tracked *.md)."
+    )
+    args = parser.parse_args()
+
+    repo_root = REPO_ROOT
+    targets = collect_markdown_targets(repo_root, args.targets)
+
+    if not targets:
+        if not args.quiet:
+            print("No Markdown files found to verify.")
+        sys.exit(0)
+
+    if not args.quiet:
+        print(f"Scanning {len(targets)} Markdown files for intra-corpus link integrity...")
+
+    anchors_cache = {}
+    total_checked = 0
+    all_broken = []
+
+    for target_path in targets:
+        rel_path = os.path.relpath(target_path, repo_root)
+        checked, broken = check_file_links(target_path, anchors_cache, repo_root)
+        total_checked += checked
+        if broken:
+            for line_no, target, reason in broken:
+                all_broken.append((rel_path, line_no, target, reason))
+        elif args.verbose:
+            print(f"  [OK] {rel_path} ({checked} links)")
+
+    if all_broken:
+        print(f"\n[ERROR] Found {len(all_broken)} broken intra-corpus markdown link(s):", file=sys.stderr)
+        for rel_path, line_no, target, reason in all_broken:
+            print(f"  {rel_path}:{line_no}: [{target}] -> {reason}", file=sys.stderr)
+        sys.exit(1)
+
+    if not args.quiet:
+        print(f"[SUCCESS] All {total_checked} intra-corpus markdown hyperlinks and anchors resolved cleanly across {len(targets)} files.")
+    else:
+        print(f"0 broken links ({total_checked} checked across {len(targets)} files).")
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()

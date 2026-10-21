@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: EUPL-1.2
+# Tagref configuration for gachi
+# See https://github.com/stepchowfun/tagref
+
+ignore_rules:
+  - "bin/gachi-tagref"
+  - ".githooks"

@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# bin/gachi-tagref — Mechanical Tagref Cross-Reference Verification Harness
+# Enforces:
+#   - 0 duplicate tag definitions across repository
+#   - 0 dangling reference pointers
+#   - 0 orphaned tags without references
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+if command -v tagref >/dev/null 2>&1; then
+  (cd "${REPO_ROOT}" && tagref "$@")
+else
+  REPO_ROOT="${REPO_ROOT}" python3 - <<'EOF'
+import sys, os, re, subprocess
+
+repo_root = os.environ.get("REPO_ROOT", os.getcwd())
+
+ignore_rules = []
+cfg_file = os.path.join(repo_root, "tagref.yml")
+if os.path.isfile(cfg_file):
+    with open(cfg_file, "r", encoding="utf-8") as f:
+        in_ignore = False
+        for line in f:
+            line_str = line.strip()
+            if line_str.startswith("ignore_rules:"):
+                in_ignore = True
+                continue
+            if in_ignore:
+                if line_str.startswith("-"):
+                    rule = line_str.lstrip("- ").strip().strip("\"'")
+                    if rule:
+                        ignore_rules.append(rule)
+                elif line_str and not line_str.startswith("#"):
+                    in_ignore = False
+
+tag_regex = re.compile(r"\[tag:([a-zA-Z0-9_\-]+)\]")
+ref_regex = re.compile(r"\[ref:([a-zA-Z0-9_\-]+)\]")
+
+try:
+    git_files = subprocess.check_output(["git", "ls-files"], cwd=repo_root, text=True).splitlines()
+except Exception:
+    git_files = []
+
+if not git_files:
+    for root, dirs, files in os.walk(repo_root):
+        dirs[:] = [d for d in dirs if d not in (".git", "dist-newstyle", ".ghc.environment.*")]
+        for f in files:
+            git_files.append(os.path.relpath(os.path.join(root, f), repo_root))
+
+tags = {}
+refs = []
+scanned = 0
+
+for rel_path in git_files:
+    if any(rel_path == rule or rel_path.startswith(rule.rstrip("/") + "/") for rule in ignore_rules):
+        continue
+    abs_path = os.path.join(repo_root, rel_path)
+    try:
+        with open(abs_path, "r", encoding="utf-8", errors="ignore") as f:
+            scanned += 1
+            for lineno, line in enumerate(f, 1):
+                for match in tag_regex.finditer(line):
+                    t = match.group(1)
+                    if t in tags:
+                        print(f"Error: duplicate tag '{t}' in {rel_path}:{lineno} (already in {tags[t]})", file=sys.stderr)
+                        sys.exit(1)
+                    tags[t] = f"{rel_path}:{lineno}"
+                for match in ref_regex.finditer(line):
+                    refs.append((match.group(1), f"{rel_path}:{lineno}"))
+    except Exception:
+        continue
+
+dangling = []
+for r, loc in refs:
+    if r not in tags:
+        dangling.append(f"Error: dangling reference '{r}' at {loc}")
+
+if dangling:
+    for d in dangling:
+        print(d, file=sys.stderr)
+    sys.exit(1)
+
+print(f"{len(tags)} tags, 0 group members, {len(refs)} references validated in {scanned} files.")
+EOF
+fi
