@@ -21,6 +21,12 @@ SPDX-License-Identifier: EUPL-1.2
 - **Contiguous Layouts:** Structural osteology data must maintain unboxed or flat contiguous arrays (`Data.Primitive.SmallArray`) without pointer indirection bloat.
 - **Lock-Free Atomic Synchronization:** Chattering state transitions use atomic memory references and monotonic ID counters.
 
+### 1.3 Ecosystem Infrastructure Governance ([`~/src/PLAN.md` §1](../../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi))
+- **Skeleton Conformity:** Generated project templates (`gachi init`) must strictly adhere to the ecosystem standardization matrix (multi-package layout, `.githooks/`, `.hlint.yaml`, `docs/`, `bin/`).
+- **Chattering Sync Idempotency:** Configuration propagation (`gachi sync`) must be deterministic, atomic, and idempotent, never clobbering project-specific customizations.
+- **Non-Destructive Retrofitting:** Retrofitting operations (`gachi retrofit`) must non-destructively overlay ecosystem scaffolding without altering existing domain code.
+- **Plan Rollback Isolation:** The detached Git metadata store (`~/src/.plan.git`) and snapshot ledger (`~/src/plans/snapshots/`) must remain strictly isolated from child repository `.git/` directories.
+
 ---
 
 ## 2. Verification Gates & Quality Control

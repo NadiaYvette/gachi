@@ -17,4 +17,6 @@ The foundational package `packages/gachi-core` is scaffolded with pure osteologi
 - **Git Governance**: `.githooks/commit-msg` enforcing Sarutahiko RFC 2822 commit trailer rules; `.githooks/pre-commit` guarding Tagref and link consistency.
 
 ### Active Frontier
-- Advancing Milestone 1.2: Unboxed primitive osteological arrays and flat contiguous node graphs.
+- **Ecosystem Infrastructure Governance (`~/src/PLAN.md` §1):** Formally designated as the engine for ecosystem skeleton generation (`gachi init`), cross-repo chattering configuration propagation (`gachi sync`), non-destructive project retrofitting (`gachi retrofit`), and strategic plan versioning/rollback (`gachi plan` / `plan-ctl`).
+- **Advancing Milestone 1.2 & Phase 2:** Formulating unboxed primitive osteological arrays (`SmallArray#`, `ByteArray#`) and integrating `polytropos-dhall` for declarative Dhall-templated repository skeletons.
+- **Verification Status:** All 5 physical verification gates (`bin/gachi-verify`) passing cleanly with 0 warnings, 0 hints, and 0 dangling tagref references.

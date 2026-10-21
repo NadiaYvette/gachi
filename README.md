@@ -1,21 +1,27 @@
 # gachi — がちがち
 
-> **gachi** (*onomatopoeia*): The sharp, rhythmic clicking and chattering sound of the teeth of a *gashadokuro* (がしゃどくろ) — the colossal mythical skeleton formed from the spirits of those fallen in famine and battle.
+> **gachi** (*onomatopoeia* がちがち): The sharp, rhythmic clicking and chattering of the teeth of a *gashadokuro* (がしゃどくろ) — the colossal mythical skeleton formed from the spirits of those fallen in famine and battle.
+>
+> When the gashadokuro approaches, its towering bones vibrate in ominous unison, emitting the rhythmic *gachi-gachi* cadence that warns all in its shadow of an unyielding, unified presence.
 
-`gachi` is a high-performance skeletal computation and bone-crunching structural Haskell substrate. It provides flat, contiguous, unboxed osteological memory representations, zero-copy graph transformations, and deterministic lock-free state synchronization.
+In our software engineering ecosystem, `gachi` is the **Project Skeleton & Configuration Propagation Infrastructure** across `~/src/*` (governed by [`../PLAN.md` §1](../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi)), paired with an unboxed, high-performance osteological computation substrate.
+
+Just as a biological skeleton forms the rigid, immutable osseous scaffold that preserves anatomical integrity, `gachi` establishes and guarantees the canonical structural skeletons of our repositories. And just as the teeth of the gashadokuro chatter in rapid harmonic resonance, `gachi` propagates formatting standards, linter rules, git hooks, CI matrices, and agent advisory contexts across all ecosystem repositories in lockstep.
 
 ---
 
-## Architecture & Design Pillars
+## Architecture & Core Subsystems
 
-1. **Osteological Layouts (`Gachi.Osteology`):**
-   Flat contiguous memory representations combining unboxed primitive arrays (`SmallArray#`, `ByteArray#`) with compile-time bone indices, avoiding pointer chasing and eliminating garbage collection pressure.
-2. **Deterministic Chattering Synchronization (`Gachi.Core`):**
-   Lock-free, atomic synchronization primitives designed for harmonic multi-agent consensus and high-throughput concurrent evaluation.
-3. **Rigid Invariant Enforcement:**
-   Every structural transformation satisfies strict formal preservation laws verified via Hspec property tests and in-code GHC Notes.
-4. **Canonical Ecosystem Standards:**
-   Engineered to align seamlessly with `~/src/polytropos/`, `~/src/gargamelle/`, and `~/src/sarutahiko/`.
+1. **Osteological Repository Skeletons (`gachi init`):**
+   Declarative, Dhall-parameterized project skeleton generator (leveraging `polytropos-dhall` and `gachi-core`). Generates modular multi-package DAGs (`packages/<name>/<name>.cabal`), canonical design monographs (`docs/notes/<NAME>_DESIGN.md`), centralized indices (`docs/INDEX.md`), test suites, and 5-gate physical verification harnesses (`bin/<name>-verify`).
+2. **Chattering Configuration Propagation (`gachi sync`):**
+   High-speed configuration and policy synchronizer. Propagates upstream improvements to code formatting (Fourmolu/Ormolu), static analysis guardrails (`.hlint.yaml`), git governance (`.gitmessage`, `.githooks/`), and agent advisory contexts (`AGENTS.md`, `.agents/rules/`, `.agents/skills/`) across `polytropos`, `gargamelle`, `sarutahiko`, and satellite checkouts.
+3. **Non-Destructive Project Retrofitting (`gachi retrofit`):**
+   Diagnostic analyzer and non-destructive skeleton overlay engine that brings adopted codebases, legacy repositories, and single-package checkouts into full compliance with ecosystem standards without overwriting project-specific logic.
+4. **Ecosystem Plan Governance & Rollback (`gachi plan` / `plan-ctl`):**
+   Deterministic versioning and rollback architecture for top-level strategic planning documents (`~/src/PLAN.md`, `~/src/STATE.md`). Backed by an isolated detached Git metadata store (`~/src/.plan.git`) and an append-only snapshot ledger (`~/src/plans/snapshots/`) with SHA256 integrity checksums.
+5. **High-Performance Osteological Computing (`gachi-core`):**
+   Flat, contiguous, unboxed osteological memory representations (`SmallArray#`, `ByteArray#`) with compile-time bone indices, lock-free chattering state machines, and zero-copy topological transformations.
 
 ---
 
@@ -23,9 +29,12 @@
 
 ```text
 packages/
-  gachi-core/             -- Foundational osteological types, memory layouts, and primitives
+  gachi-core/             -- Core osteological primitives, contiguous memory layouts, and atomic sync
 docs/
   INDEX.md                -- Corpus reading map and documentation inventory
+  TUTORIAL.md             -- Hands-on primer on osteological rigs and skeleton templating
+  NEWBIE_GUIDE.md         -- Token-conservation funnel and fast symbol navigation
+  MAINTAINER_GUIDE.md     -- Architectural governance, memory invariants, and verification gates
   notes/
     GACHI_DESIGN.md       -- Canonical design monograph: architectural decisions & invariants
     DOC_STRATEGY.md       -- Documentation lifecycle, genres, and precedence rules

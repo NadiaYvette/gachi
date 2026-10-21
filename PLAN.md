@@ -1,44 +1,90 @@
 # gachi — Strategic Roadmap (`PLAN.md`)
 
-**Status:** ACTIVE SPECIFICATION · October 2026  
-**Scope:** Core Architecture, Osteological Primitives, and Verification Milestones
+**Status:** ACTIVE STRATEGIC ROADMAP · October 2026  
+**Scope:** Ecosystem Skeleton Generation, Chattering Configuration Propagation, and Osteological Computing  
+**Canonical Anchor:** Linked to and implementing [`../PLAN.md` §1](../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi)
 
 ---
 
-## Phase 1: Foundational Skeleton & Osteological Memory (`gachi-core`) [IN PROGRESS]
+## Phase 1: Foundational Skeleton & Osteological Memory (`gachi-core`) [ACTIVE]
 
-- [x] **Milestone 1.1:** Canonical Repository Skeleton Setup
+- [x] **Milestone 1.1:** Canonical Repository Skeleton Grounding
   - Git repository initialization, `.githooks/` (`commit-msg`, `pre-commit`), `.gitmessage`.
   - Multi-forge CI configuration (`.github/workflows/ci.yml`, `.gitlab-ci.yml`).
-  - Agent advisory context (`AGENTS.md`, modular rules in `.agents/rules/`).
-  - Physical verification harness (`./bin/gachi-verify`).
+  - Agent advisory layer (`AGENTS.md`, compatibility symlinks, modular rules in `.agents/rules/`).
+  - 5-gate physical verification harness (`./bin/gachi-verify`).
 - [ ] **Milestone 1.2:** Unboxed Osteological Primitives
-  - Contiguous primitive arrays (`SmallArray#`, `ByteArray#`) with compile-time bone indices.
-  - Constant-time O(1) bone lookup and zero-allocation traversal.
+  - Contiguous primitive arrays (`SmallArray#`, `ByteArray#`) with compile-time bone indices (`BoneId`, `JointId`).
+  - Constant-time $O(1)$ bone lookup and zero-allocation traversal.
+  - Integration with `polytropos-dhall` for declarative bone schema deserialization.
   - Property-based roundtrip testing under Hspec/Tasty.
 - [ ] **Milestone 1.3:** Tagref & In-Code Notes Grounding
-  - Establish canonical GHC Notes architecture:
-    - `Note [Osteological Contiguous Memory Layout]`
-    - `Note [Chattering Lock-Free Atomic Synchronization]`
+  - Canonical GHC Notes architecture:
+    - `Note [Osteological Contiguous Memory Layout]` (`[ref:note-osteology-memory-layout]`)
+    - `Note [Chattering Lock-Free Atomic Synchronization]` (`[ref:note-chattering-synchronization]`)
+    - `Note [Ecosystem Standardization Invariants]` (`[ref:note-ecosystem-standardization]`)
   - Zero dangling references verified via `./bin/gachi-tagref`.
 
 ---
 
-## Phase 2: Lock-Free Chattering Synchronization
+## Phase 2: Declarative Project Skeleton Generator (`gachi init`)
 
-- [ ] **Milestone 2.1:** Atomic Bone State Machines
-  - Non-blocking compare-and-swap (CAS) primitives on osteological joints.
-  - Deterministic lock-free consensus and harmonic synchrony.
-- [ ] **Milestone 2.2:** Multi-Agent Concurrent Traversal
-  - Safe concurrent traversals without global locks.
-  - Formal race-freedom and progress guarantees.
+- [ ] **Milestone 2.1:** Dhall-Parameterized Project Schema (`polytropos-dhall`)
+  - Define declarative Dhall types for project metadata, modular package DAGs, Cabal 3.18 / GHC 9.14 stanzas, license terms (EUPL-1.2), and author information.
+  - Decode schemas into strongly-typed osteological records via `polytropos-dhall`'s `GenericDhall` / `FromDhall`.
+- [ ] **Milestone 2.2:** Multi-Package Workspace Scaffolding
+  - Automated generation of canonical directory layouts: `packages/<name>/`, `docs/notes/`, `docs/INDEX.md`, `test/`, `PLAN.md`, `STATE.md`, `AGENTS.md`, `.agents/`, `.gitmessage`, `.githooks/`.
+  - Production of turnkey verification scripts (`bin/<name>-verify`, `bin/generate-tags`, `bin/<name>-tagref`, `bin/<name>-linkcheck`, `bin/<name>-cloc`).
+- [ ] **Milestone 2.3:** CLI Tooling (`gachi init`)
+  - Interactive and headless CLI modes to instantiate new projects or add satellite packages to existing workspaces.
 
 ---
 
-## Phase 3: Skeletal Transformations & Ecosystem Integration
+## Phase 3: Chattering Configuration Propagation (`gachi sync`)
 
-- [ ] **Milestone 3.1:** Double-Pushout (DPO) Graph Rewriting on Skeletal Graphs
-  - Algebraic rewriting over osteological topologies.
-  - Fusion with `gargamelle` algebraic rewriting engines.
-- [ ] **Milestone 3.2:** Polytropos Row-Polymorphic Integration
-  - Unboxed row layouts mapping into `polytropos-core` representations.
+- [ ] **Milestone 3.1:** Cross-Repository Standardization Matrix (`~/src/PLAN.md` §1.A)
+  - Standardization enforcement across directory layout, formatting profiles (Fourmolu/Ormolu/rustfmt), linter guardrails (`.hlint.yaml`), build conventions (`cabal.project` GHC 9.14 / Cabal 3.18), git hooks, and multi-mirror topologies.
+- [ ] **Milestone 3.2:** Harmonic Chattering Synchronization (`gachi sync`)
+  - Differential inspection of shared infrastructure assets across `~/src/*` (`polytropos`, `gargamelle`, `sarutahiko`).
+  - Atomic, idempotent propagation of updated formatting rules, linter hints, git commit hooks, and agent guidance.
+- [ ] **Milestone 3.3:** Forge-Tiered CI Matrix Generation
+  - Synthesis of tailored CI configs: heavyweight physical verification for GitHub Actions vs lightweight static gates for resource-constrained community forges (GitLab, Framagit, Disroot).
+
+---
+
+## Phase 4: Project Retrofitting Engine (`gachi retrofit`)
+
+- [ ] **Milestone 4.1:** Diagnostic Repository Inspector
+  - Static analysis of arbitrary target checkouts: detects language stacks, build systems, existing tests, and missing ecosystem standards.
+- [ ] **Milestone 4.2:** Non-Destructive Skeleton Overlay
+  - Safely scaffolds missing documentation hierarchies, hooks, and verification harnesses without perturbing existing domain logic.
+- [ ] **Milestone 4.3:** Progressive Quality Gate Realization
+  - Incremental remediation pipelines: bringing builds under `-Wall -Werror`, purging HLint warnings, and grounding physical verification gates.
+
+---
+
+## Phase 5: Ecosystem Plan Governance & Rollback (`gachi plan` / `plan-ctl`)
+
+- [ ] **Milestone 5.1:** Detached Git Store Architecture (`~/src/.plan.git`)
+  - Initialize isolated Git repository tracking ecosystem governance files (`PLAN.md`, `STATE.md`, `INDEX.md`) across `~/src/` without interfering with child git checkouts.
+- [ ] **Milestone 5.2:** Append-Only Snapshot Ledger (`~/src/plans/snapshots/`)
+  - Automated pre-mutation snapshots with timestamped filenames and SHA256 integrity checksums.
+- [ ] **Milestone 5.3:** CLI Plan Governance Subcommands
+  - `gachi plan checkpoint [message]`: Atomic commit to detached store + snapshot.
+  - `gachi plan diff [ref]`: Semantic delta display against prior checkpoints.
+  - `gachi plan log`: Chronological history of ecosystem planning revisions.
+  - `gachi plan rollback <checkpoint>`: Deterministic, atomic restoration of planning state.
+
+---
+
+## Phase 6: Lock-Free Chattering Synchronization & Graph Transformations
+
+- [ ] **Milestone 6.1:** Atomic Bone State Machines
+  - Non-blocking compare-and-swap (CAS) primitives on osteological joints.
+  - Deterministic lock-free consensus and harmonic synchrony.
+- [ ] **Milestone 6.2:** Multi-Agent Concurrent Traversal
+  - Safe concurrent traversals without global locks; formal race-freedom guarantees.
+- [ ] **Milestone 6.3:** Double-Pushout (DPO) Algebraic Graph Rewriting
+  - Algebraic rewriting over osteological topologies; fusion with `gargamelle` rewriting engines.
+- [ ] **Milestone 6.4:** Polytropos Zero-Cost Coercions
+  - Zero-copy mapping between osteological arrays and `polytropos-core` flat `Rep` structures.

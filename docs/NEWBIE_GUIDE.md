@@ -31,5 +31,8 @@ Before opening any file, identify the module owning the concept:
 | `BoneId`, `JointId`, `Skeleton`, lock-free sync | `Gachi.Core` | `packages/gachi-core/src/Gachi/Core.hs` |
 | `OsteoSegment`, `appendOsteo`, unboxed arrays | `Gachi.Osteology` | `packages/gachi-core/src/Gachi/Osteology.hs` |
 | Verification tests and property suites | `Main` (Test) | `packages/gachi-core/test/Main.hs` |
+| Repository skeleton generator & templating | `gachi init` | `docs/TUTORIAL.md` §2 / `~/src/PLAN.md` §1.B |
+| Chattering configuration propagation | `gachi sync` | `docs/TUTORIAL.md` §3 / `~/src/PLAN.md` §1.C |
+| Plan checkpointing & rollback governance | `gachi plan` | `docs/TUTORIAL.md` §4 / `~/src/PLAN.md` §1.E |
 
 View targeted slices using `view_file` (typically 40–80 lines) around target symbols.
