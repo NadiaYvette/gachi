@@ -9,6 +9,7 @@ The foundational package `packages/gachi-core` is scaffolded with pure osteologi
 
 ### Package Architecture
 - **`gachi-core`**: Core osteological primitives, contiguous unboxed memory representations, atomic chattering synchronization, and invariant validation.
+- **`gachi-schema`**: Declarative Dhall schemas, `polytropos-dhall` codecs, isomorphic Polytropos open row representations (`ProjectRec`), and turnkey project templates.
 
 ### Code Quality & Static Analysis Gates [COMPLETED]
 - **Toolchain**: GHC 9.14.1 / Cabal 3.18.1.0 targeting `-Wall -Wcompat -Wredundant-constraints`.
@@ -23,5 +24,7 @@ The foundational package `packages/gachi-core` is scaffolded with pure osteologi
   - **Milestone 1.1:** Canonical multi-forge repository skeleton grounded with strict git hooks and 5 verification gates.
   - **Milestone 1.2:** Grounded contiguous unboxed osteological primitives (`OsteoSegment a` and `OsteoBytes`), zero-allocation $O(1)$ indexing, zero-copy slicing, and contiguous `Skeleton` bone-and-joint graphs with 12/12 passing Hspec tests.
   - **Milestone 1.3:** Canonical GHC Notes architecture grounded across `Gachi.Osteology`, `Gachi.Core`, tests, maintainer guide, and design monographs with 10 tags, 60 references, 0 dangling references, and 0 duplicate tags verified via `./bin/gachi-tagref`.
-- **Advancing Phase 2 (`gachi init`):** Initiating Milestone 2.1 (Dhall-Parameterized Project Schema leveraging `polytropos-dhall` for declarative workspace templating).
-- **Verification Status:** All 5 physical verification gates (`bin/gachi-verify`) passing cleanly with 0 warnings, 0 hints, and 0 dangling tagref references.
+- **Phase 2 In Progress (`gachi init`):**
+  - **Milestone 2.1 Completed:** Grounded declarative Dhall project schemas in `packages/gachi-schema` with `FromDhall` / `ToDhall` via `GenericDhall`, Polytropos open row isomorphisms (`ProjectRec` / `RowRep`), turnkey Dhall templates, and 12/12 passing Hspec tests.
+  - **Advancing Milestone 2.2:** Multi-package workspace scaffolding engine (`packages/gachi-scaffold`).
+- **Verification Status:** All 5 physical verification gates (`bin/gachi-verify`) passing cleanly with 0 warnings, 0 hints, and 0 dangling tagref references across 2 packages.

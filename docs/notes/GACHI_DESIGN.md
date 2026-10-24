@@ -76,8 +76,7 @@ In software systems engineering, two chronic failure modes plague multi-reposito
 - **Note [Ecosystem Standardization Invariants]**
   [tag:note-ecosystem-standardization]
   Defines cross-project invariants for workspace layout, formatters, linters, git hooks, and agent advisory layers across `~/src/*` per `~/src/PLAN.md` §1.A.
-- **Note [Dhall Parameterized Skeleton Templating]**
-  [tag:note-dhall-skeleton-templating]
+- **Note [Dhall Parameterized Skeleton Templating]** (`Gachi.Schema`) [ref:note-dhall-skeleton-templating]:
   Specifies the Dhall configuration schema and code-generation rules for multi-package workspace skeletons leveraging `polytropos-dhall`.
 - **Note [Plan Governance and Rollback Mechanics]**
   [tag:note-plan-governance-rollback]

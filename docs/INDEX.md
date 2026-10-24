@@ -17,5 +17,9 @@ Welcome to the `gachi` technical documentation corpus.
 - [`DOC_STRATEGY.md`](notes/DOC_STRATEGY.md) — Ecosystem documentation strategy, precedence rules, and lifecycle.
 - [`COMMIT_ATTRIBUTION.md`](notes/COMMIT_ATTRIBUTION.md) — Linux kernel RFC 2822 trailer format standards.
 
+## Active Packages
+- [`packages/gachi-core/`](../packages/gachi-core/) — Foundational osteological memory representations (`OsteoSegment`, `OsteoBytes`) and lock-free synchronization primitives (`Skeleton`).
+- [`packages/gachi-schema/`](../packages/gachi-schema/) — Declarative Dhall project schema definitions, encoders, decoders, and Polytropos open row isomorphisms.
+
 ## Upstream & Ecosystem Planning
 - [`~/src/PLAN.md` §1](../../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi) — Parent ecosystem infrastructure mandate designating `gachi`.

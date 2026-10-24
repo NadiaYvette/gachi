@@ -35,11 +35,12 @@
 
 ---
 
-## Phase 2: Declarative Project Skeleton Generator (`gachi init`)
+## Phase 2: Declarative Project Skeleton Generator (`gachi init`) [ACTIVE]
 
-- [ ] **Milestone 2.1:** Dhall-Parameterized Project Schema (`polytropos-dhall`)
-  - Define declarative Dhall types for project metadata, modular package DAGs, Cabal 3.18 / GHC 9.14 stanzas, license terms (EUPL-1.2), and author information.
-  - Decode schemas into strongly-typed osteological records via `polytropos-dhall`'s `GenericDhall` / `FromDhall`.
+- [x] **Milestone 2.1:** Dhall-Parameterized Project Schema (`polytropos-dhall`)
+  - Grounded declarative Dhall types for project metadata, modular package DAGs, Cabal 3.18 / GHC 9.14 stanzas, license terms (EUPL-1.2), and author information in `Gachi.Schema.Project` and `Gachi.Schema.Dhall`.
+  - Implemented strongly-typed deserialization using `polytropos-dhall`'s `FromDhall` / `ToDhall` via `GenericDhall` and isomorphic open row representations (`ProjectRec`, `AuthorRec`, `PackageRec`, `RemoteRec`) backed by contiguous Polytropos `RowRep` storage.
+  - Verified 12/12 passing Hspec tests validating nominal decoding, open row roundtripping, pretty-printing, and safe error handling.
 - [ ] **Milestone 2.2:** Multi-Package Workspace Scaffolding
   - Automated generation of canonical directory layouts: `packages/<name>/`, `docs/notes/`, `docs/INDEX.md`, `test/`, `PLAN.md`, `STATE.md`, `AGENTS.md`, `.agents/`, `.gitmessage`, `.githooks/`.
   - Production of turnkey verification scripts (`bin/<name>-verify`, `bin/generate-tags`, `bin/<name>-tagref`, `bin/<name>-linkcheck`, `bin/<name>-cloc`).
