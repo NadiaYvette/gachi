@@ -17,7 +17,7 @@ SPDX-License-Identifier: EUPL-1.2 OR Apache-2.0
 
 The name **`gachi`** (がちがち) evokes the rhythmic, resonant clicking of the teeth of a *gashadokuro* (がしゃどくろ) — the mythical colossal skeleton formed from the spirits of fallen warriors. In our software engineering ecosystem, `gachi` serves as the rigid structural framework and harmonic synchronization mechanism that keeps independent repositories aligned, performant, and resilient against entropy.
 
-The implementation plan is governed by four immutable architectural principles:
+The implementation plan is governed by seven immutable architectural principles:
 
 1. **Rigidity Before Concurrency:**  
    Establish deterministic, contiguous, unboxed memory representations and baseline workspace skeletons before introducing lock-free atomic concurrency, multi-agent coordination, or graph-rewriting engines.
@@ -27,6 +27,12 @@ The implementation plan is governed by four immutable architectural principles:
    Configuration schemas and project templates must be authored in total, typed Dhall expressions via `polytropos-dhall`, eliminating the security vulnerabilities and non-determinism of Turing-complete shell or templating scripts.
 4. **Detached Governance Isolation:**  
    Ecosystem-wide strategic plan versioning and rollback (`gachi plan`) operates exclusively through an isolated, detached Git metadata store (`~/src/.plan.git`) and append-only snapshot ledger (`~/src/plans/snapshots/`), preventing pollution of or conflicts with child repository `.git/` trees.
+5. **Arrow & Profunctor Strand Decoupling ([`kernmantle-polytropos`](../../../kernmantle)):**  
+   Operational workflows (`retrofit`, `sync`, `plan`) are modeled as extensible arrow effect ropes (`Rope record mantle core a b`) where diagnostic inspection, AST parsing, pushout merging, sandboxed execution, verification, and filesystem mutations are discrete profunctor strands. Utilizing `polytropos`' unboxed flat `RecordF` (`SmallArray Any`) provides $O(1)$ strand lookup and zero-allocation re-twining (`retwine`), enabling seamless multi-mode execution (Live I/O, Dry-Run, Mock/Sandbox).
+6. **Institutional Pushout Amalgamation & Sheaf Coherence ([`gargamelle`](../../../gargamelle)):**  
+   Non-destructive configuration updating is formalized as a categorical pushout ($B \amalg_C W$) over Goguen-Burstall institutions (`gargamelle-core`), preserving satisfaction conditions across merged stanzas. External verification and untrusted inspection runs are isolated within Linux namespace containers (`gargamelle-sandbox` via `/usr/bin/bwrap`). Global ecosystem consistency is audited via 1-D cellular sheaf cohomology (`gargamelle-sheaf`), where $H^1$ obstructions pinpoint boundary and dependency drifts. Monolithic SMT/CEGIS pipelines are intentionally excluded from core CLI paths to keep operations lightweight.
+7. **Empirical Victim Project Crucible ([`gongju`](../../../gongju)):**  
+   Validation of `gachi retrofit` and `gachi sync` is performed against real uninitialized or legacy projects—beginning with `~/src/gongju/` as the primary crucible. The retrofitted scaffolding must successfully host and verify the domain library (pure Peano type-level arity combinators and permutations) under all 5 physical verification gates.
 
 ---
 
@@ -56,9 +62,10 @@ gachi/
 └── packages/
     ├── gachi-core/          # Unboxed osteology primitives & lock-free sync
     ├── gachi-schema/        # Dhall schemas & polytropos-dhall deserializers
+    ├── gachi-pipeline/      # Kernmantle arrow Rope effect engine & swappable strands
     ├── gachi-scaffold/      # Skeleton synthesis & AST code generation
-    ├── gachi-sync/          # Differential hashing & config propagation
-    ├── gachi-retrofit/      # Diagnostic repository inspector & overlay
+    ├── gachi-sync/          # Pushout propagation (gargamelle-core) & sheaf auditing (gargamelle-sheaf)
+    ├── gachi-retrofit/      # Sandboxed overlay (gargamelle-sandbox) & diagnostic inspector
     ├── gachi-plan/          # Detached git store & snapshot rollback engine
     └── gachi-cli/           # Unified CLI executable (`gachi` / `plan-ctl`)
 ```
@@ -74,11 +81,18 @@ gachi/
                       │ gachi-schema  │◄─── polytropos-dhall
                       └───────┬───────┘
                               │
+                      ┌───────▼───────┐
+                      │gachi-pipeline │◄─── kernmantle-polytropos
+                      └───────┬───────┘
+                              │
         ┌─────────────────────┼─────────────────────┐
         │                     │                     │
 ┌───────▼────────┐    ┌───────▼────────┐    ┌───────▼────────┐
 │ gachi-scaffold │    │   gachi-sync   │    │ gachi-retrofit │
 └───────┬────────┘    └───────┬────────┘    └───────┬────────┘
+        │                     │                     │
+        │               (gargamelle-core)    (gargamelle-sandbox)
+        │              (gargamelle-sheaf)           │
         │                     │                     │
         └─────────────────────┼─────────────────────┘
                               │
@@ -185,7 +199,7 @@ gachi/
 #### Milestone 3.2: Differential Chattering Synchronization Engine (`packages/gachi-sync`)
 - **Deliverables:**
   - SHA256 differential scanning: Compares existing workspace files against canonical master templates.
-  - AST-aware patching: Merges updated common stanzas (e.g. `cabal.project` flags, `.hlint.yaml` rules) while preserving local package lists and domain-specific exemptions.
+  - Institutional Pushout AST Merging ([`gargamelle-core`](../../../gargamelle)): Integrates updated common stanzas (e.g. `cabal.project` flags, `.hlint.yaml` rules) via categorical pushouts ($B \amalg_C W$) over Goguen-Burstall signatures, guaranteeing preservation of local customizations without destructive line-level clobbering.
   - CLI subcommand: `gachi sync [--dry-run] [--target <path>|--all]`.
 - **Invariants:**
   - Idempotency guarantee: Executing `gachi sync` repeatedly on a clean repository results in a no-op ($f(f(x)) = f(x)$).
@@ -205,6 +219,16 @@ gachi/
     - `github`, `gitcode`, `framagit`, `disroot`.
   - Exclusion filter for non-compliant hosting providers (e.g. SourceHut).
 
+#### Milestone 3.5: Cellular Sheaf Coherence Auditor (`gachi doctor --sheaf`)
+- **Deliverables:**
+  - 1-D cellular sheaf model over `~/src/*` implemented via [`gargamelle-sheaf`](../../../gargamelle):
+    - Vertices ($V$): Repositories (`polytropos`, `gargamelle`, `sarutahiko`, `gachi`, `gongju`).
+    - Edges ($E$): Shared version and standardization contracts.
+    - Stalks ($\mathcal{F}$): Configuration states.
+    - Coboundary Operator ($\delta^0$): Discrepancies along boundary contracts.
+  - $H^0$ harmonic equilibrium check: Reports 0 drift when all checkouts satisfy ecosystem contracts.
+  - $H^1$ cohomology obstruction localization: Pinpoints exact repositories and drifting interface contracts.
+
 ---
 
 ### Phase 4: Non-Destructive Project Retrofitting Engine (`gachi retrofit`)
@@ -220,8 +244,14 @@ gachi/
     - Documentation gaps relative to `DOC_STRATEGY.md`.
     - Git hook and commit attribution conformance.
 
-#### Milestone 4.2: Non-Destructive Overlay Engine (`packages/gachi-retrofit`)
+#### Milestone 4.2: Non-Destructive Overlay & Sandboxed Execution (`packages/gachi-retrofit`)
 - **Deliverables:**
+  - Profunctor Arrow Rope Engine ([`kernmantle-polytropos`](../../../kernmantle)): Retrofit stages are composed as independent effect strands woven into a `Rope`:
+    - `StrandDiagnostic`: Read workspace files, probe tools.
+    - `StrandPushoutMerge`: Amalgamate configs via `gargamelle-core`.
+    - `StrandSandboxExec`: Run verification in disposable Linux namespaces (`gargamelle-sandbox` via `/usr/bin/bwrap`).
+    - `StrandMutation`: Write out synthesized assets.
+    - `StrandVerify`: Execute `./bin/<project>-verify`.
   - Turnkey overlay installer:
     - Scaffolds missing `docs/INDEX.md`, `docs/notes/`, `docs/MAINTAINER_GUIDE.md`.
     - Injects `AGENTS.md` and symlinks (`CLAUDE.md`, `.hermes.md`).
@@ -237,6 +267,17 @@ gachi/
     - Level 1: Tagref cross-references and Markdown links validated.
     - Level 2: Build warnings cleaned under `-Wall -Wcompat`.
     - Level 3: HLint hints completely eliminated (zero-hint policy).
+
+#### Milestone 4.4: Empirical Victim Project Crucible: `~/src/gongju/`
+- **Deliverables:**
+  - Primary external validation target: [`~/src/gongju/`](../../../gongju) ("tools/implement").
+  - Automated retrofitting: Scaffold uninitialized repository into standard single-package/multi-package workspace.
+  - Domain implementation validation: Implement and verify the pure Peano type-level utility functions from `gemini-type-level-utility-functions.pdf`:
+    - `Gongju.Peano`: `Peano`, `ToPeano`, `FromPeano`.
+    - `Gongju.Composition`: `ComposeN` (`compN @n`), `FmapN` (`fmapN @n`).
+    - `Gongju.Positional`: `Yank` (`slipr @n`), `Shove` (`slipl @n`), `Twist` (`twist @n`).
+    - `Gongju.Permute`: Curried argument permutation `Permute` (`permute @'[2, 0, 1]`) via iterated `Yank` and `Adjust`.
+  - Verification: Complete passage of all 5 physical verification gates (`bin/gongju-verify`).
 
 ---
 
@@ -339,3 +380,4 @@ Quality assurance in `gachi` is enforced through continuous physical verificatio
 | Version | Date | Author / Agent | Changes |
 |---|---|---|---|
 | **v1.0** | 2026-10-24 | Antigravity (Google / gemini-3.8-pro) | Initial canonical implementation plan establishing Phases 1–6, multi-package architecture, verification gates, and risk mitigations. |
+| **v1.1** | 2026-10-24 | Antigravity (Google / gemini-3.8-pro) | Integrate kernmantle-polytropos effect pipeline architecture, selective gargamelle integration (pushouts, sandbox, sheaf coherence), and adopt ~/src/gongju/ as the victim project crucible. |
