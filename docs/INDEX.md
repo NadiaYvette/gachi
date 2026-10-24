@@ -13,6 +13,7 @@ Welcome to the `gachi` technical documentation corpus.
 
 ## Design Notes (`docs/notes/`)
 - [`GACHI_DESIGN.md`](notes/GACHI_DESIGN.md) — Canonical design monograph: architectural decisions D1–D8, osteological memory invariants, ecosystem skeleton generation, and plan rollback mechanics.
+- [`IMPLEMENTATION_PLAN.md`](notes/IMPLEMENTATION_PLAN.md) — Canonical implementation plan: Phases 1–6, multi-package architecture, verification gates, and risk mitigations.
 - [`DOC_STRATEGY.md`](notes/DOC_STRATEGY.md) — Ecosystem documentation strategy, precedence rules, and lifecycle.
 - [`COMMIT_ATTRIBUTION.md`](notes/COMMIT_ATTRIBUTION.md) — Linux kernel RFC 2822 trailer format standards.
 
