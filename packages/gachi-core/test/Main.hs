@@ -21,6 +21,7 @@ main = hspec do
       lookupBone (BoneId 0) skel `shouldBe` Nothing
       lookupJoint (JointId 0) skel `shouldBe` Nothing
 
+    -- Tested against Note [Monotonic Identifier Allocation and Contiguous Indexing] [ref:note-monotonic-id-allocation]
     it "inserts and retrieves bones with monotonically assigned identifiers in O(1)" do
       let skel0 = emptySkeleton :: Skeleton Text
           (b0, skel1) = insertBone "femur" skel0
@@ -38,6 +39,7 @@ main = hspec do
       unsafeLookupBone b1 skel3 `shouldBe` "tibia"
       lookupBone (BoneId 99) skel3 `shouldBe` Nothing
 
+    -- Tested against Note [Directional Joints and Incident Traversal] [ref:note-directional-joints-traversal]
     it "connects joints between bones and traverses incident connections" do
       let skel0 = emptySkeleton :: Skeleton Text
           (b0, skel1) = insertBone "femur" skel0
@@ -55,6 +57,7 @@ main = hspec do
       length incidents `shouldBe` 2
       map jointId incidents `shouldBe` [JointId 0, JointId 1]
 
+    -- Tested against Note [Zero-Copy Sub-Segment Slicing] [ref:note-zero-copy-slicing]
     it "extracts zero-copy bone slices from a skeleton" do
       let skel0 = emptySkeleton :: Skeleton Text
           (_, skel1) = insertBone "cervical" skel0
@@ -76,6 +79,7 @@ main = hspec do
       segmentCapacity seg `shouldBe` 0
       indexOsteo 0 seg `shouldBe` Nothing
 
+    -- Tested against Note [Geometric Capacity Expansion and Reallocation] [ref:note-geometric-capacity-expansion]
     it "appends elements sequentially and dynamically expands capacity" do
       let seg0 = emptySegment
           seg1 = appendOsteo (10 :: Int) seg0
@@ -96,6 +100,7 @@ main = hspec do
       indexOsteo 5 seg5 `shouldBe` Nothing
       indexOsteo (-1) seg5 `shouldBe` Nothing
 
+    -- Tested against Note [Zero-Copy Sub-Segment Slicing] [ref:note-zero-copy-slicing]
     it "performs zero-copy slicing within contiguous memory" do
       let seg = fromListOsteo [10, 20, 30, 40, 50 :: Int]
       case sliceOsteo 1 3 seg of

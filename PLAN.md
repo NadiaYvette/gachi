@@ -7,7 +7,7 @@
 
 ---
 
-## Phase 1: Foundational Skeleton & Osteological Memory (`gachi-core`) [ACTIVE]
+## Phase 1: Foundational Skeleton & Osteological Memory (`gachi-core`) [COMPLETED]
 
 - [x] **Milestone 1.1:** Canonical Repository Skeleton Grounding
   - Git repository initialization, `.githooks/` (`commit-msg`, `pre-commit`), `.gitmessage`.
@@ -19,12 +19,19 @@
   - Constant-time $O(1)$ bone lookup and zero-allocation traversal (`indexOsteo`, `unsafeIndexOsteo`, `lookupBone`, `unsafeLookupBone`).
   - Zero-copy slicing (`sliceOsteo`, `sliceBytes`, `sliceBones`) without intermediate heap reallocation.
   - Comprehensive Hspec specification validating capacity growth, bounds safety, Semigroup concatenation, and roundtrip fidelity.
-- [ ] **Milestone 1.3:** Tagref & In-Code Notes Grounding
-  - Canonical GHC Notes architecture:
+- [x] **Milestone 1.3:** Tagref & In-Code Notes Grounding
+  - Canonical GHC Notes architecture grounded in code, tests, monographs, and maintainer guidance:
     - `Note [Osteological Contiguous Memory Layout]` (`[ref:note-osteology-memory-layout]`)
+    - `Note [Zero-Copy Sub-Segment Slicing]` (`[ref:note-zero-copy-slicing]`)
+    - `Note [Geometric Capacity Expansion and Reallocation]` (`[ref:note-geometric-capacity-expansion]`)
     - `Note [Chattering Lock-Free Atomic Synchronization]` (`[ref:note-chattering-synchronization]`)
+    - `Note [Monotonic Identifier Allocation and Contiguous Indexing]` (`[ref:note-monotonic-id-allocation]`)
+    - `Note [Directional Joints and Incident Traversal]` (`[ref:note-directional-joints-traversal]`)
     - `Note [Ecosystem Standardization Invariants]` (`[ref:note-ecosystem-standardization]`)
-  - Zero dangling references verified via `./bin/gachi-tagref`.
+    - `Note [Dhall Parameterized Skeleton Templating]` (`[ref:note-dhall-skeleton-templating]`)
+    - `Note [Plan Governance and Rollback Mechanics]` (`[ref:note-plan-governance-rollback]`)
+    - `Note [Non-Destructive Skeleton Overlay]` (`[ref:note-nondestructive-retrofit]`)
+  - 10 tags, 60 references, 0 dangling references, and 0 duplicate tags verified via `./bin/gachi-tagref`.
 
 ---
 

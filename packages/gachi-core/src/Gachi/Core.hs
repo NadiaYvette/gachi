@@ -87,6 +87,50 @@ Gachi resolves this by employing lock-free, optimistic atomic state progression:
     with bounded exponential backoff, preserving global progress and lock-freedom.
 -}
 
+{- Note [Monotonic Identifier Allocation and Contiguous Indexing]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[tag:note-monotonic-id-allocation]
+In high-performance graph processing and AST transformation passes, node lookups
+frequently bottleneck on map operations. Standard implementations rely on balanced
+binary search trees (such as 'Data.Map.Map', incurring O(log N) pointer dereferences)
+or hash tables (incurring hashing overhead, pointer collisions, and bucket indirection).
+
+Gachi adopts a strict monotonic identifier allocation strategy:
+  1. Contiguous Identity Mapping: 'BoneId' and 'JointId' are monotonically increasing
+     64-bit unsigned integers ('Word64'). Because bones are inserted into an append-only
+     contiguous 'OsteoSegment', each 'BoneId' corresponds exactly to its contiguous array
+     offset in 'skeletonBones'.
+  2. O(1) Zero-Allocation Lookups: Querying 'lookupBone' or 'unsafeLookupBone' reduces
+     to a single integer conversion and direct array indexing via 'indexOsteo' /
+     'unsafeIndexOsteo'. No hashing, tree balancing, or intermediate allocation occurs.
+  3. Determinism & Generation Stability: Identifiers are strictly monotonic within a
+     skeletal generation, eliminating identifier recycling hazards and guaranteeing
+     byte-for-byte reproducibility during serialization and AST comparison.
+
+See also:
+  - Note [Osteological Contiguous Memory Layout] [ref:note-osteology-memory-layout]
+-}
+
+{- Note [Directional Joints and Incident Traversal]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[tag:note-directional-joints-traversal]
+Skeletal structures represent directed multigraphs where nodes ('BoneId') are joined
+by directed edges ('Joint'). A joint captures a directional dependency or structural
+link between a source bone and a target bone.
+
+Key Structural Properties:
+  1. Contiguous Edge Storage: All joints are stored in a dedicated contiguous 'OsteoSegment'
+     ('skeletonJoints'). This layout ensures that traversing or filtering the edge set
+     benefits from sequential memory prefetching rather than traversing linked-list edge
+     structures.
+  2. Incident Edge Resolution: 'incidentJoints' resolves all edges touching a specific
+     bone (as either source or target). This primitive underlies bidirectional dependency
+     resolution, AST parent-child navigation, and topological sorting passes.
+  3. Compositional Isolation: Bone payloads and joint topologies reside in independent
+     osteological segments, permitting payload transformation (via 'fmap' on bones)
+     without invalidating or reallocating the joint topology.
+-}
+
 -- | Strongly-typed unique identifier for an osteological bone node.
 newtype BoneId = BoneId { unBoneId :: Word64 }
   deriving (Eq, Ord, Show, Generic)
@@ -111,8 +155,10 @@ data Joint = Joint
 -- All nodes and connections are packed into contiguous 'OsteoSegment' structures
 -- guaranteeing cache-line spatial locality and zero-allocation indexing.
 --
--- See Note [Osteological Contiguous Memory Layout] [ref:note-osteology-memory-layout]
--- and Note [Chattering Lock-Free Atomic Synchronization] [ref:note-chattering-synchronization].
+-- See Note [Osteological Contiguous Memory Layout] [ref:note-osteology-memory-layout],
+-- Note [Chattering Lock-Free Atomic Synchronization] [ref:note-chattering-synchronization],
+-- Note [Monotonic Identifier Allocation and Contiguous Indexing] [ref:note-monotonic-id-allocation],
+-- and Note [Directional Joints and Incident Traversal] [ref:note-directional-joints-traversal].
 data Skeleton a = Skeleton
   { skeletonBones  :: !(OsteoSegment a)
     -- ^ Contiguous flat primitive array storing bone payloads.
@@ -146,6 +192,8 @@ totalJoints = segmentLength . skeletonJoints
 -- and the updated 'Skeleton'.
 --
 -- Time complexity: @O(1)@ amortized.
+--
+-- See Note [Monotonic Identifier Allocation and Contiguous Indexing] [ref:note-monotonic-id-allocation].
 insertBone :: a -> Skeleton a -> (BoneId, Skeleton a)
 insertBone !val skel =
   let bid = BoneId (skeletonNextId skel)
@@ -160,6 +208,8 @@ insertBone !val skel =
 -- Returns 'Nothing' if the 'BoneId' is unallocated or out of bounds.
 --
 -- Time complexity: @O(1)@ zero-allocation.
+--
+-- See Note [Monotonic Identifier Allocation and Contiguous Indexing] [ref:note-monotonic-id-allocation].
 lookupBone :: BoneId -> Skeleton a -> Maybe a
 lookupBone (BoneId w) skel =
   indexOsteo (fromIntegral w) (skeletonBones skel)
@@ -169,6 +219,8 @@ lookupBone (BoneId w) skel =
 -- Precondition: The 'BoneId' was returned by a prior 'insertBone' on this skeleton.
 --
 -- Time complexity: @O(1)@ zero-allocation.
+--
+-- See Note [Monotonic Identifier Allocation and Contiguous Indexing] [ref:note-monotonic-id-allocation].
 unsafeLookupBone :: BoneId -> Skeleton a -> a
 unsafeLookupBone (BoneId w) skel =
   unsafeIndexOsteo (fromIntegral w) (skeletonBones skel)
@@ -178,6 +230,8 @@ unsafeLookupBone (BoneId w) skel =
 -- Returns the assigned 'JointId' and the updated 'Skeleton'.
 --
 -- Time complexity: @O(1)@ amortized.
+--
+-- See Note [Directional Joints and Incident Traversal] [ref:note-directional-joints-traversal].
 connectJoint :: BoneId -> BoneId -> Skeleton a -> (JointId, Skeleton a)
 connectJoint src dst skel =
   let jid = JointId (fromIntegral (totalJoints skel))
@@ -189,6 +243,8 @@ connectJoint src dst skel =
 -- | Retrieve a skeletal joint by its 'JointId'.
 --
 -- Time complexity: @O(1)@.
+--
+-- See Note [Directional Joints and Incident Traversal] [ref:note-directional-joints-traversal].
 lookupJoint :: JointId -> Skeleton a -> Maybe Joint
 lookupJoint (JointId w) skel =
   indexOsteo (fromIntegral w) (skeletonJoints skel)
@@ -203,10 +259,14 @@ allJoints :: Skeleton a -> [Joint]
 allJoints = toListOsteo . skeletonJoints
 
 -- | Find all joints incident to a given 'BoneId' (as either source or target).
+--
+-- See Note [Directional Joints and Incident Traversal] [ref:note-directional-joints-traversal].
 incidentJoints :: BoneId -> Skeleton a -> [Joint]
 incidentJoints bid skel =
   filter (\j -> jointSource j == bid || jointTarget j == bid) (allJoints skel)
 
 -- | Create a zero-copy sub-segment slice of bone payloads.
+--
+-- See Note [Zero-Copy Sub-Segment Slicing] [ref:note-zero-copy-slicing].
 sliceBones :: Int -> Int -> Skeleton a -> Maybe (OsteoSegment a)
 sliceBones off len skel = sliceOsteo off len (skeletonBones skel)

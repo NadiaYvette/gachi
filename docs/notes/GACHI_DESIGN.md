@@ -61,10 +61,18 @@ In software systems engineering, two chronic failure modes plague multi-reposito
 
 ## 3. Grounded Notes Architecture
 
-- **Note [Osteological Contiguous Memory Layout]** (`Gachi.Osteology`):
-  Defines flat memory layout invariants, alignment boundaries, and zero-allocation indexing.
-- **Note [Chattering Lock-Free Atomic Synchronization]** (`Gachi.Core`):
+- **Note [Osteological Contiguous Memory Layout]** (`Gachi.Osteology`) [ref:note-osteology-memory-layout]:
+  Defines flat memory layout invariants, alignment boundaries, zero-allocation indexing, and GC minimization.
+- **Note [Zero-Copy Sub-Segment Slicing]** (`Gachi.Osteology`) [ref:note-zero-copy-slicing]:
+  Specifies pure O(1) pointer-windowed sub-segment slicing without heap array reallocations.
+- **Note [Geometric Capacity Expansion and Reallocation]** (`Gachi.Osteology`) [ref:note-geometric-capacity-expansion]:
+  Specifies amortized O(1) doubling discipline for dynamic bone/node appending.
+- **Note [Chattering Lock-Free Atomic Synchronization]** (`Gachi.Core`) [ref:note-chattering-synchronization]:
   Details lock-free CAS mechanics, optimistic concurrency retry loops, and atomic state transitions.
+- **Note [Monotonic Identifier Allocation and Contiguous Indexing]** (`Gachi.Core`) [ref:note-monotonic-id-allocation]:
+  Establishes contiguous 1:1 identity mapping between monotonically allocated 64-bit identifiers and array offsets.
+- **Note [Directional Joints and Incident Traversal]** (`Gachi.Core`) [ref:note-directional-joints-traversal]:
+  Specifies directed multigraph connections and sequential incident edge resolution across contiguous segments.
 - **Note [Ecosystem Standardization Invariants]**
   [tag:note-ecosystem-standardization]
   Defines cross-project invariants for workspace layout, formatters, linters, git hooks, and agent advisory layers across `~/src/*` per `~/src/PLAN.md` §1.A.

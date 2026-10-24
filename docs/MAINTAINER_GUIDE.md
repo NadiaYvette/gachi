@@ -18,8 +18,12 @@ SPDX-License-Identifier: EUPL-1.2
 - **Notes are corrected regardless:** A stale note must be updated in the same change set.
 
 ### 1.2 The Osteological Memory Discipline
-- **Contiguous Layouts:** Structural osteology data must maintain unboxed or flat contiguous arrays (`Data.Primitive.SmallArray`) without pointer indirection bloat.
-- **Lock-Free Atomic Synchronization:** Chattering state transitions use atomic memory references and monotonic ID counters.
+- **Contiguous Layouts:** Structural osteology data must maintain unboxed or flat contiguous arrays (`Data.Primitive.SmallArray`) without pointer indirection bloat. See Note [Osteological Contiguous Memory Layout] [ref:note-osteology-memory-layout].
+- **Zero-Copy Slicing:** Sub-segment operations and regional extractions must share underlying arrays via pure pointer windows without heap copies. See Note [Zero-Copy Sub-Segment Slicing] [ref:note-zero-copy-slicing].
+- **Amortized Growth:** Dynamic bone appending follows geometric array capacity expansion. See Note [Geometric Capacity Expansion and Reallocation] [ref:note-geometric-capacity-expansion].
+- **Monotonic Indexing:** Bone and joint IDs map directly to contiguous offsets with zero hashing or tree searching. See Note [Monotonic Identifier Allocation and Contiguous Indexing] [ref:note-monotonic-id-allocation].
+- **Directional Joints:** Multigraph connectivity is modeled via contiguous directed joint segments. See Note [Directional Joints and Incident Traversal] [ref:note-directional-joints-traversal].
+- **Lock-Free Atomic Synchronization:** Chattering state transitions use atomic memory references and monotonic ID counters. See Note [Chattering Lock-Free Atomic Synchronization] [ref:note-chattering-synchronization].
 
 ### 1.3 Ecosystem Infrastructure Governance ([`~/src/PLAN.md` §1](../../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi))
 - **Skeleton Conformity:** Generated project templates (`gachi init`) must strictly adhere to the ecosystem standardization matrix (multi-package layout, `.githooks/`, `.hlint.yaml`, `docs/`, `bin/`).

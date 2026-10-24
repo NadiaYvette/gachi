@@ -74,16 +74,75 @@ severe performance penalties:
   3. Garbage Collector Pause Latency: A graph with 100,000 nodes introduces 100,000
      pointers that the GHC garbage collector must trace during minor scavenges.
 
-Osteological Memory Design:
+Osteological Memory Representation:
 Gachi resolves these costs by packing nodes into contiguous 'OsteoSegment' unboxed structures:
-  - Memory Locality: Segments allocate flat, contiguous memory blocks via GHC primitive
-    'SmallArray#' structures.
-  - Zero-Copy Slicing: Sub-segments and joint regions reference sub-ranges within contiguous
-    memory blocks via an offset and length window without reallocating intermediate arrays.
-  - O(1) Zero-Allocation Indexing: Nodes are addressed via primitive unboxed integer offsets,
-    reducing traversal to single arithmetic additions and direct memory indexing.
-  - Amortized Geometric Resizing: Dynamic growth doubles array capacity upon saturation,
-    ensuring O(1) amortized append performance.
+
+  +--------------------------------------------------------------------------+
+  | GHC Heap Object: OsteoSegment a                                          |
+  |   osteoArray  ---> [ SmallArray# Header | Slot 0 | Slot 1 | ... | Slot N ]|
+  |   osteoOffset ---> !Int  (Slice start offset within SmallArray#)          |
+  |   osteoLength ---> !Int  (Slice length in elements)                      |
+  +--------------------------------------------------------------------------+
+
+Key Architectural Properties:
+  - Cache Coherence: Sequential element slots fit within 64-byte L1 cache lines
+    (8 word-sized pointers per cache line), maximizing burst prefetching.
+  - Zero-Allocation Indexing: Addressing reduces to a single integer addition
+    (@osteoOffset + idx@) followed by an unboxed array dereference (@indexSmallArray#@).
+  - GC Minimization: Flat arrays present a single card-marked memory object to the GHC
+    garbage collector rather than an interconnected web of individual heap closures.
+
+See also:
+  - Note [Zero-Copy Sub-Segment Slicing] [ref:note-zero-copy-slicing]
+  - Note [Geometric Capacity Expansion and Reallocation] [ref:note-geometric-capacity-expansion]
+-}
+
+{- Note [Zero-Copy Sub-Segment Slicing]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[tag:note-zero-copy-slicing]
+Sub-graphs, bone chains, and spinal segments frequently require localized traversal
+or regional extraction without perturbing the enclosing skeletal topology. In standard
+functional collections (lists, sequences, vectors), slicing either creates an expensive
+copy of the sub-array or introduces deep tree node rebalancing.
+
+In 'OsteoSegment', slicing is implemented as a pure, zero-allocation pointer window:
+
+  Underlying Contiguous SmallArray#:
+  [ Slot 0 | Slot 1 | Slot 2 | Slot 3 | Slot 4 | Slot 5 | Slot 6 | Slot 7 ]
+           ^                                   ^
+           |-- osteoOffset = 1                 |
+           <-------------- osteoLength = 4 --->|
+           Active Window: [ Slot 1, Slot 2, Slot 3, Slot 4 ]
+
+When 'sliceOsteo' is invoked:
+  1. Range Validation: Validates that @sliceOff >= 0@, @sliceLen >= 0@, and
+     @sliceOff + sliceLen <= osteoLength@ in O(1) time.
+  2. Pointer Windowing: Constructs a new 'OsteoSegment' sharing the identical
+     underlying 'osteoArray' reference with updated offset:
+     @osteoOffset' = osteoOffset + sliceOff@ and @osteoLength' = sliceLen@.
+  3. Allocation Freedom: Zero element copy occurs; only the 3-field record
+     envelope is allocated on the GHC young generation.
+-}
+
+{- Note [Geometric Capacity Expansion and Reallocation]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[tag:note-geometric-capacity-expansion]
+Dynamic incremental bone insertion in 'appendOsteo' follows an amortized doubling
+discipline modeled after high-performance dynamic arrays.
+
+Resizing Mechanics:
+  1. Zero Offset Fast-Path: When a segment is un-sliced (@osteoOffset == 0@) and
+     active elements are fewer than total capacity (@osteoLength < capacity@),
+     'appendOsteo' allocates a fresh mutable array of identical capacity via
+     'thawSmallArray', writes the new element into @osteoLength@, and freezes
+     it in ST.
+  2. Saturated Geometric Doubling: When capacity is reached or when appending to a
+     sliced sub-segment (@osteoOffset > 0@), a new capacity is computed:
+     @newCap = max 4 (max (len + 1) (len * 2))@.
+     The active elements from [@osteoOffset .. osteoOffset + osteoLength - 1@]
+     are copied into the new array at offset 0, followed by the appended element.
+  3. Complexity Guarantees: An insertion sequence of N elements incurs O(N) total
+     memory allocations, yielding O(1) amortized insertion cost per node.
 -}
 
 -- | A contiguous, immutable osteological memory segment storing elements of type @a@.
@@ -91,7 +150,8 @@ Gachi resolves these costs by packing nodes into contiguous 'OsteoSegment' unbox
 -- Features an offset and length window into an underlying primitive 'SA.SmallArray',
 -- enabling true $O(1)$ zero-copy sub-segment slicing without heap allocations.
 --
--- See Note [Osteological Contiguous Memory Layout] [ref:note-osteology-memory-layout].
+-- See Note [Osteological Contiguous Memory Layout] [ref:note-osteology-memory-layout]
+-- and Note [Zero-Copy Sub-Segment Slicing] [ref:note-zero-copy-slicing].
 data OsteoSegment a = OsteoSegment
   { osteoArray  :: !(SA.SmallArray a)
     -- ^ Underlying flat contiguous primitive array.
@@ -178,6 +238,8 @@ segmentLength = osteoLength
 -- contiguous array if current capacity is exceeded.
 --
 -- Time complexity: @O(1)@ amortized.
+--
+-- See Note [Geometric Capacity Expansion and Reallocation] [ref:note-geometric-capacity-expansion].
 appendOsteo :: a -> OsteoSegment a -> OsteoSegment a
 appendOsteo !val (OsteoSegment arr off len) =
   let cap = SA.sizeofSmallArray arr
@@ -199,6 +261,8 @@ appendOsteo !val (OsteoSegment arr off len) =
 -- Returns 'Nothing' if the index is out of bounds.
 --
 -- Time complexity: @O(1)@.
+--
+-- See Note [Osteological Contiguous Memory Layout] [ref:note-osteology-memory-layout].
 indexOsteo :: Int -> OsteoSegment a -> Maybe a
 indexOsteo idx (OsteoSegment arr off len)
   | idx >= 0 && idx < len = Just (SA.indexSmallArray arr (off + idx))
@@ -209,6 +273,8 @@ indexOsteo idx (OsteoSegment arr off len)
 -- Precondition: @0 <= idx < segmentLength seg@.
 --
 -- Time complexity: @O(1)@ zero-allocation.
+--
+-- See Note [Osteological Contiguous Memory Layout] [ref:note-osteology-memory-layout].
 unsafeIndexOsteo :: Int -> OsteoSegment a -> a
 unsafeIndexOsteo idx (OsteoSegment arr off _) =
   SA.indexSmallArray arr (off + idx)
@@ -218,6 +284,8 @@ unsafeIndexOsteo idx (OsteoSegment arr off _) =
 -- Returns 'Nothing' if the slice range extends beyond the segment bounds.
 --
 -- Time complexity: @O(1)@ with zero heap array allocation.
+--
+-- See Note [Zero-Copy Sub-Segment Slicing] [ref:note-zero-copy-slicing].
 sliceOsteo :: Int -> Int -> OsteoSegment a -> Maybe (OsteoSegment a)
 sliceOsteo sliceOff sliceLen (OsteoSegment arr off len)
   | sliceOff >= 0 && sliceLen >= 0 && sliceOff + sliceLen <= len =
