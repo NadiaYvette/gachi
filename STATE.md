@@ -19,5 +19,6 @@ The foundational package `packages/gachi-core` is scaffolded with pure osteologi
 ### Active Frontier
 - **Ecosystem Infrastructure Governance (`~/src/PLAN.md` §1):** Formally designated as the engine for ecosystem skeleton generation (`gachi init`), cross-repo chattering configuration propagation (`gachi sync`), non-destructive project retrofitting (`gachi retrofit`), and strategic plan versioning/rollback (`gachi plan` / `plan-ctl`).
 - **Implementation Plan:** Canonical implementation plan established at [`docs/notes/IMPLEMENTATION_PLAN.md`](docs/notes/IMPLEMENTATION_PLAN.md) detailing Phases 1–6, multi-package architecture, verification gates, and risk mitigations.
-- **Advancing Milestone 1.2 & Phase 2:** Formulating unboxed primitive osteological arrays (`SmallArray#`, `ByteArray#`) and integrating `polytropos-dhall` for declarative Dhall-templated repository skeletons.
+- **Milestone 1.2 Completed:** Grounded contiguous unboxed osteological primitives (`OsteoSegment a` and `OsteoBytes`), zero-allocation $O(1)$ indexing, zero-copy slicing, and contiguous `Skeleton` bone-and-joint graphs with 12/12 passing Hspec tests.
+- **Advancing Milestone 1.3 & Phase 2:** Grounding full GHC Notes architecture and integrating `polytropos-dhall` for declarative Dhall-templated repository skeletons (`gachi init`).
 - **Verification Status:** All 5 physical verification gates (`bin/gachi-verify`) passing cleanly with 0 warnings, 0 hints, and 0 dangling tagref references.

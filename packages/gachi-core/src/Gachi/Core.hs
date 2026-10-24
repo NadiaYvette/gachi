@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -6,21 +7,64 @@
 --
 -- Provides foundational osteological abstractions and deterministic state synchronization
 -- inspired by the gashadokuro mythical skeletal folklore.
+--
+-- All skeletal structures are backed by contiguous primitive 'OsteoSegment' storage,
+-- ensuring $O(1)$ zero-allocation lookups and flat memory locality.
+--
+-- = When to Use This Module
+--
+-- * **Osteological Skeletal Graphs:** Modeling directed bone-and-joint graphs with contiguous
+--   memory representations and monotonic node identifier tracking.
+-- * **Lock-Free Concurrency Substrate:** Serving as the structural topology for concurrent
+--   chattering agent traversals without mutex contention.
+-- * **Zero-Allocation Node Lookup:** Querying bone payloads in $O(1)$ time via 'lookupBone' or
+--   'unsafeLookupBone'.
+--
+-- = Worked Example
+--
+-- >>> import Gachi.Core
+-- >>> let skel0 = emptySkeleton
+-- >>> let (b0, skel1) = insertBone "femur" skel0
+-- >>> let (b1, skel2) = insertBone "tibia" skel1
+-- >>> let (j0, skel3) = connectJoint b0 b1 skel2
+-- >>> lookupBone b0 skel3
+-- Just "femur"
+-- >>> totalJoints skel3
+-- 1
 module Gachi.Core
   ( -- * Osteological Identifiers
     BoneId(..)
   , JointId(..)
+  , Joint(..)
+
     -- * Skeletal Structures
   , Skeleton(..)
   , emptySkeleton
   , totalBones
+  , totalJoints
   , insertBone
   , lookupBone
+  , unsafeLookupBone
+  , connectJoint
+  , lookupJoint
+  , allBones
+  , allJoints
+  , incidentJoints
+  , sliceBones
   ) where
 
-import GHC.Generics (Generic)
-import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
+import GHC.Generics (Generic)
+import Gachi.Osteology
+  ( OsteoSegment
+  , emptySegment
+  , segmentLength
+  , appendOsteo
+  , indexOsteo
+  , unsafeIndexOsteo
+  , sliceOsteo
+  , toListOsteo
+  )
 
 {- Note [Chattering Lock-Free Atomic Synchronization]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -51,21 +95,38 @@ newtype BoneId = BoneId { unBoneId :: Word64 }
 newtype JointId = JointId { unJointId :: Word64 }
   deriving (Eq, Ord, Show, Generic)
 
+-- | A directional joint connecting a source bone to a target bone.
+data Joint = Joint
+  { jointId     :: !JointId
+    -- ^ Unique identifier for this joint connection.
+  , jointSource :: !BoneId
+    -- ^ The originating bone handle.
+  , jointTarget :: !BoneId
+    -- ^ The terminating bone handle.
+  } deriving (Eq, Ord, Show, Generic)
+
 -- | A skeletal graph structure parameterized over payload @a@.
--- Contains a collection of osteological bones and their associated attributes.
+-- Contains a contiguous collection of osteological bones and joints.
 --
--- See Note [Chattering Lock-Free Atomic Synchronization] [ref:note-chattering-synchronization].
+-- All nodes and connections are packed into contiguous 'OsteoSegment' structures
+-- guaranteeing cache-line spatial locality and zero-allocation indexing.
+--
+-- See Note [Osteological Contiguous Memory Layout] [ref:note-osteology-memory-layout]
+-- and Note [Chattering Lock-Free Atomic Synchronization] [ref:note-chattering-synchronization].
 data Skeleton a = Skeleton
-  { skeletonBones :: !(Map.Map BoneId a)
-    -- ^ Primary map of bone handles to node payloads.
+  { skeletonBones  :: !(OsteoSegment a)
+    -- ^ Contiguous flat primitive array storing bone payloads.
+  , skeletonJoints :: !(OsteoSegment Joint)
+    -- ^ Contiguous flat primitive array storing skeletal joints.
   , skeletonNextId :: !Word64
     -- ^ Monotonically increasing identifier counter for next bone allocation.
   } deriving (Eq, Show, Generic)
 
--- | Create an empty skeletal structure with zero bones.
+-- | Create an empty skeletal structure with zero bones and zero joints.
 emptySkeleton :: Skeleton a
 emptySkeleton = Skeleton
-  { skeletonBones = Map.empty
+  { skeletonBones  = emptySegment
+  , skeletonJoints = emptySegment
   , skeletonNextId = 0
   }
 
@@ -73,24 +134,79 @@ emptySkeleton = Skeleton
 --
 -- Time complexity: @O(1)@.
 totalBones :: Skeleton a -> Int
-totalBones = Map.size . skeletonBones
+totalBones = segmentLength . skeletonBones
+
+-- | Count the total number of joints connecting bones in the skeleton.
+--
+-- Time complexity: @O(1)@.
+totalJoints :: Skeleton a -> Int
+totalJoints = segmentLength . skeletonJoints
 
 -- | Insert a new bone with payload @a@ into the skeleton, returning the assigned 'BoneId'
 -- and the updated 'Skeleton'.
 --
--- Time complexity: @O(log N)@.
+-- Time complexity: @O(1)@ amortized.
 insertBone :: a -> Skeleton a -> (BoneId, Skeleton a)
-insertBone val skel =
+insertBone !val skel =
   let bid = BoneId (skeletonNextId skel)
-      newMap = Map.insert bid val (skeletonBones skel)
+      newBones = appendOsteo val (skeletonBones skel)
       newSkel = skel
-        { skeletonBones = newMap
+        { skeletonBones  = newBones
         , skeletonNextId = skeletonNextId skel + 1
         }
   in (bid, newSkel)
 
--- | Retrieve the payload associated with a specific 'BoneId', if present.
+-- | Retrieve the payload associated with a specific 'BoneId' with bounds checking.
+-- Returns 'Nothing' if the 'BoneId' is unallocated or out of bounds.
 --
--- Time complexity: @O(log N)@.
+-- Time complexity: @O(1)@ zero-allocation.
 lookupBone :: BoneId -> Skeleton a -> Maybe a
-lookupBone bid skel = Map.lookup bid (skeletonBones skel)
+lookupBone (BoneId w) skel =
+  indexOsteo (fromIntegral w) (skeletonBones skel)
+{-# INLINE lookupBone #-}
+
+-- | Retrieve the payload associated with a specific 'BoneId' without bounds checking.
+-- Precondition: The 'BoneId' was returned by a prior 'insertBone' on this skeleton.
+--
+-- Time complexity: @O(1)@ zero-allocation.
+unsafeLookupBone :: BoneId -> Skeleton a -> a
+unsafeLookupBone (BoneId w) skel =
+  unsafeIndexOsteo (fromIntegral w) (skeletonBones skel)
+{-# INLINE unsafeLookupBone #-}
+
+-- | Connect two bones via a directed skeletal 'Joint'.
+-- Returns the assigned 'JointId' and the updated 'Skeleton'.
+--
+-- Time complexity: @O(1)@ amortized.
+connectJoint :: BoneId -> BoneId -> Skeleton a -> (JointId, Skeleton a)
+connectJoint src dst skel =
+  let jid = JointId (fromIntegral (totalJoints skel))
+      newJoint = Joint jid src dst
+      newJoints = appendOsteo newJoint (skeletonJoints skel)
+      newSkel = skel { skeletonJoints = newJoints }
+  in (jid, newSkel)
+
+-- | Retrieve a skeletal joint by its 'JointId'.
+--
+-- Time complexity: @O(1)@.
+lookupJoint :: JointId -> Skeleton a -> Maybe Joint
+lookupJoint (JointId w) skel =
+  indexOsteo (fromIntegral w) (skeletonJoints skel)
+{-# INLINE lookupJoint #-}
+
+-- | Extract all bone payloads as a standard Haskell list.
+allBones :: Skeleton a -> [a]
+allBones = toListOsteo . skeletonBones
+
+-- | Extract all skeletal joints as a standard Haskell list.
+allJoints :: Skeleton a -> [Joint]
+allJoints = toListOsteo . skeletonJoints
+
+-- | Find all joints incident to a given 'BoneId' (as either source or target).
+incidentJoints :: BoneId -> Skeleton a -> [Joint]
+incidentJoints bid skel =
+  filter (\j -> jointSource j == bid || jointTarget j == bid) (allJoints skel)
+
+-- | Create a zero-copy sub-segment slice of bone payloads.
+sliceBones :: Int -> Int -> Skeleton a -> Maybe (OsteoSegment a)
+sliceBones off len skel = sliceOsteo off len (skeletonBones skel)

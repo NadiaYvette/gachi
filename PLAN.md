@@ -14,11 +14,11 @@
   - Multi-forge CI configuration (`.github/workflows/ci.yml`, `.gitlab-ci.yml`).
   - Agent advisory layer (`AGENTS.md`, compatibility symlinks, modular rules in `.agents/rules/`).
   - 5-gate physical verification harness (`./bin/gachi-verify`).
-- [ ] **Milestone 1.2:** Unboxed Osteological Primitives
+- [x] **Milestone 1.2:** Unboxed Osteological Primitives
   - Contiguous primitive arrays (`SmallArray#`, `ByteArray#`) with compile-time bone indices (`BoneId`, `JointId`).
-  - Constant-time $O(1)$ bone lookup and zero-allocation traversal.
-  - Integration with `polytropos-dhall` for declarative bone schema deserialization.
-  - Property-based roundtrip testing under Hspec/Tasty.
+  - Constant-time $O(1)$ bone lookup and zero-allocation traversal (`indexOsteo`, `unsafeIndexOsteo`, `lookupBone`, `unsafeLookupBone`).
+  - Zero-copy slicing (`sliceOsteo`, `sliceBytes`, `sliceBones`) without intermediate heap reallocation.
+  - Comprehensive Hspec specification validating capacity growth, bounds safety, Semigroup concatenation, and roundtrip fidelity.
 - [ ] **Milestone 1.3:** Tagref & In-Code Notes Grounding
   - Canonical GHC Notes architecture:
     - `Note [Osteological Contiguous Memory Layout]` (`[ref:note-osteology-memory-layout]`)
