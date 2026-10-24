@@ -41,9 +41,11 @@
   - Grounded declarative Dhall types for project metadata, modular package DAGs, Cabal 3.18 / GHC 9.14 stanzas, license terms (EUPL-1.2), and author information in `Gachi.Schema.Project` and `Gachi.Schema.Dhall`.
   - Implemented strongly-typed deserialization using `polytropos-dhall`'s `FromDhall` / `ToDhall` via `GenericDhall` and isomorphic open row representations (`ProjectRec`, `AuthorRec`, `PackageRec`, `RemoteRec`) backed by contiguous Polytropos `RowRep` storage.
   - Verified 12/12 passing Hspec tests validating nominal decoding, open row roundtripping, pretty-printing, and safe error handling.
-- [ ] **Milestone 2.2:** Multi-Package Workspace Scaffolding
-  - Automated generation of canonical directory layouts: `packages/<name>/`, `docs/notes/`, `docs/INDEX.md`, `test/`, `PLAN.md`, `STATE.md`, `AGENTS.md`, `.agents/`, `.gitmessage`, `.githooks/`.
-  - Production of turnkey verification scripts (`bin/<name>-verify`, `bin/generate-tags`, `bin/<name>-tagref`, `bin/<name>-linkcheck`, `bin/<name>-cloc`).
+- [x] **Milestone 2.2:** Multi-Package Workspace Scaffolding (`gachi-scaffold`)
+  - Grounded declarative scaffolding engine `packages/gachi-scaffold` synthesizing complete canonical ecosystem workspaces: multi-package hierarchy (`packages/*/src`, `packages/*/test`, `.cabal`), toolchain configs (`cabal.project`, `cabal.project.local.example`, `.hlint.yaml`, `.gitmessage`, `.githooks/`), documentation corpus (`docs/notes/`, `docs/INDEX.md`, `docs/TUTORIAL.md`, `docs/NEWBIE_GUIDE.md`, `docs/MAINTAINER_GUIDE.md`, `docs/notes/DOC_STRATEGY.md`, `docs/notes/COMMIT_ATTRIBUTION.md`), and operational files (`PLAN.md`, `STATE.md`, `AGENTS.md`, `CLAUDE.md`, `.agents/rules/`).
+  - Implemented turnkey 5-gate physical verification script generators (`bin/<name>-verify`, `bin/generate-tags`, `bin/<name>-tagref`, `bin/<name>-linkcheck`, `bin/<name>-cloc`).
+  - Canonically grounded `Note [Ecosystem Standardization Invariants]` (`[ref:note-ecosystem-standardization]`) in `Gachi.Scaffold`.
+  - Verified 15/15 passing Hspec tests validating pure generation, filesystem materialization, permission bits, error modes (`FailOnExisting`, `SkipExisting`, `OverwriteExisting`), and physical gate self-consistency on generated target projects.
 - [ ] **Milestone 2.3:** CLI Tooling (`gachi init`)
   - Interactive and headless CLI modes to instantiate new projects or add satellite packages to existing workspaces.
 

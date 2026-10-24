@@ -20,6 +20,7 @@ Welcome to the `gachi` technical documentation corpus.
 ## Active Packages
 - [`packages/gachi-core/`](../packages/gachi-core/) — Foundational osteological memory representations (`OsteoSegment`, `OsteoBytes`) and lock-free synchronization primitives (`Skeleton`).
 - [`packages/gachi-schema/`](../packages/gachi-schema/) — Declarative Dhall project schema definitions, encoders, decoders, and Polytropos open row isomorphisms.
+- [`packages/gachi-scaffold/`](../packages/gachi-scaffold/) — Multi-package workspace scaffolding engine, canonical file tree synthesis, and turnkey verification harnesses.
 
 ## Upstream & Ecosystem Planning
 - [`~/src/PLAN.md` §1](../../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi) — Parent ecosystem infrastructure mandate designating `gachi`.

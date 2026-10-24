@@ -73,8 +73,7 @@ In software systems engineering, two chronic failure modes plague multi-reposito
   Establishes contiguous 1:1 identity mapping between monotonically allocated 64-bit identifiers and array offsets.
 - **Note [Directional Joints and Incident Traversal]** (`Gachi.Core`) [ref:note-directional-joints-traversal]:
   Specifies directed multigraph connections and sequential incident edge resolution across contiguous segments.
-- **Note [Ecosystem Standardization Invariants]**
-  [tag:note-ecosystem-standardization]
+- **Note [Ecosystem Standardization Invariants]** (`Gachi.Scaffold`) [ref:note-ecosystem-standardization]:
   Defines cross-project invariants for workspace layout, formatters, linters, git hooks, and agent advisory layers across `~/src/*` per `~/src/PLAN.md` §1.A.
 - **Note [Dhall Parameterized Skeleton Templating]** (`Gachi.Schema`) [ref:note-dhall-skeleton-templating]:
   Specifies the Dhall configuration schema and code-generation rules for multi-package workspace skeletons leveraging `polytropos-dhall`.
