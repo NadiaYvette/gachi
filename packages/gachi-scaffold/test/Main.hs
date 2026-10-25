@@ -67,6 +67,39 @@ gongjuFixture =
 
 main :: IO ()
 main = hspec $ do
+  describe "Gachi.Scaffold.Markdown (GFM AST & Pretty-Printing)" $ do
+    it "renders headings at appropriate depth levels" $ do
+      renderMarkdown [h1 "Level 1", h2 "Level 2", h3 "Level 3", h4 "Level 4"]
+        `shouldBe` "# Level 1\n\n## Level 2\n\n### Level 3\n\n#### Level 4\n"
+
+    it "renders inlines including formatting, hyperlinks, and dynamic tags" $ do
+      let doc = [paraInlines [plain "Text with ", bold "bold", plain ", ", italic "italic", plain ", ", code "code", plain ", ", link "example" "https://example.com", plain ", and ", tagDef "my-tag"]]
+      renderMarkdown doc
+        `shouldBe` "Text with **bold**, *italic*, `code`, [example](https://example.com), and [tag:my-tag]\n"
+
+    it "renders fenced code blocks with language annotation and clean margins" $ do
+      let doc = [codeBlock "haskell" "main :: IO ()\nmain = putStrLn \"hello\"\n"]
+      renderMarkdown doc
+        `shouldBe` "```haskell\nmain :: IO ()\nmain = putStrLn \"hello\"\n```\n"
+
+    it "renders bullet lists and ordered lists deterministically" $ do
+      let bList = [bulletList [plain "Item A", bold "Item B"]]
+          oList = [orderedList [plain "Step 1", code "Step 2"]]
+      renderMarkdown bList `shouldBe` "- Item A\n- **Item B**\n"
+      renderMarkdown oList `shouldBe` "1. Step 1\n2. `Step 2`\n"
+
+    it "dynamically measures and pads table columns with aligned separator lines" $ do
+      let headers = ["Component", "Language", "Status"]
+          rows =
+            [ [plain "Engine", code "Haskell", bold "Active"]
+            , [plain "Compiler Verification", code "Bash", plain "Operational"]
+            ]
+          rendered = renderMarkdown [table headers rows]
+      rendered `shouldSatisfy` T.isInfixOf "| Component             | Language  | Status      |"
+      rendered `shouldSatisfy` T.isInfixOf "| :-------------------- | :-------- | :---------- |"
+      rendered `shouldSatisfy` T.isInfixOf "| Engine                | `Haskell` | **Active**  |"
+      rendered `shouldSatisfy` T.isInfixOf "| Compiler Verification | `Bash`    | Operational |"
+
   describe "Gachi.Scaffold.Templates (Pure Generation)" $ do
     it "generates complete canonical asset set (>25 files)" $ do
       let entries = generateProjectScaffold gongjuFixture
@@ -215,8 +248,8 @@ main = hspec $ do
       withTempDir "gachi-tagref-test" $ \tmpDir -> do
         _ <- generateAndWriteScaffold tmpDir FailOnExisting gongjuFixture
         let tagrefScript = tmpDir </> "bin/gongju-tagref"
-        (code, stdout, stderr) <- readProcessWithExitCode tagrefScript [] ""
-        code `shouldBe` ExitSuccess
+        (exitCode, stdout, stderr) <- readProcessWithExitCode tagrefScript [] ""
+        exitCode `shouldBe` ExitSuccess
         stdout `shouldSatisfy` (\out -> "0 dangling" `isInfixOfStr` out || "validated in" `isInfixOfStr` out)
         stderr `shouldBe` ""
 
@@ -224,8 +257,8 @@ main = hspec $ do
       withTempDir "gachi-link-test" $ \tmpDir -> do
         _ <- generateAndWriteScaffold tmpDir FailOnExisting gongjuFixture
         let linkScript = tmpDir </> "bin/gongju-linkcheck"
-        (code, stdout, stderr) <- readProcessWithExitCode linkScript ["--quiet"] ""
-        code `shouldBe` ExitSuccess
+        (exitCode, stdout, stderr) <- readProcessWithExitCode linkScript ["--quiet"] ""
+        exitCode `shouldBe` ExitSuccess
         stdout `shouldSatisfy` ("0 broken links" `isInfixOfStr`)
         stderr `shouldBe` ""
 
@@ -233,8 +266,8 @@ main = hspec $ do
       withTempDir "gachi-cloc-test" $ \tmpDir -> do
         _ <- generateAndWriteScaffold tmpDir FailOnExisting gongjuFixture
         let clocScript = tmpDir </> "bin/gongju-cloc"
-        (code, stdout, stderr) <- readProcessWithExitCode clocScript ["--quiet", "--check"] ""
-        code `shouldBe` ExitSuccess
+        (exitCode, stdout, stderr) <- readProcessWithExitCode clocScript ["--quiet", "--check"] ""
+        exitCode `shouldBe` ExitSuccess
         stdout `shouldSatisfy` ("target: 50.0%+" `isInfixOfStr`)
         stderr `shouldBe` ""
 

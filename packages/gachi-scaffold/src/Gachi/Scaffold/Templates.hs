@@ -103,19 +103,38 @@ import Gachi.Schema.Project
   , projectName
   , projectPackages
   )
+import Gachi.Scaffold.Markdown
+  ( Block(..)
+  , bold
+  , bulletList
+  , code
+  , codeBlock
+  , h1
+  , h2
+  , h3
+  , hr
+  , inlines
+  , link
+  , linkInline
+  , orderedList
+  , para
+  , paraInlines
+  , plain
+  , plainCodeBlock
+  , renderInline
+  , renderMarkdown
+  , tagDef
+  , tagRef
+  )
 import Gachi.Scaffold.Types (FileEntry(..))
 
 --------------------------------------------------------------------------------
 -- Dynamic Tag and Anchor Placeholders
 --------------------------------------------------------------------------------
 
--- | Constructs a dynamic Tagref definition tag to prevent premature host indexing.
-tagCoreArch :: Text
-tagCoreArch = "[" <> "tag:note-core-architecture]"
-
 -- | Constructs a dynamic Tagref reference pointer.
 refCoreArch :: Text
-refCoreArch = "[" <> "ref:note-core-architecture]"
+refCoreArch = renderInline (tagRef "note-core-architecture")
 
 -- | Canonical ecosystem standardization reference pointer.
 refStandardization :: Text
@@ -658,36 +677,30 @@ readmeTemplate :: Project -> Text
 readmeTemplate proj =
   let pName = projectName proj
       auth = projectAuthor proj
-  in T.unlines
-    [ "# " <> pName
-    , ""
-    , projectDescription proj
-    , ""
-    , "## Quick Start"
-    , ""
-    , "```bash"
-    , "# Build all packages"
-    , "cabal build all"
-    , ""
-    , "# Run full test suite"
-    , "cabal test all"
-    , ""
-    , "# Run physical verification gates"
-    , "./bin/" <> pName <> "-verify"
-    , "```"
-    , ""
-    , "## Documentation"
-    , ""
-    , "- [`AGENTS.md`](AGENTS.md) — Advisory context and rules for AI assistants."
-    , "- [`PLAN.md`](PLAN.md) — Strategic roadmap and phase delivery schedule."
-    , "- [`STATE.md`](STATE.md) — Active operational session frontier."
-    , "- [`docs/INDEX.md`](docs/INDEX.md) — Documentation corpus inventory."
-    , "- [`docs/TUTORIAL.md`](docs/TUTORIAL.md) — Getting started tutorial."
-    , ""
-    , "## License & Attribution"
-    , ""
-    , "- **License:** " <> projectLicense proj
-    , "- **Author:** " <> authorName auth <> " <" <> authorEmail auth <> ">"
+  in renderMarkdown
+    [ h1 pName
+    , para (projectDescription proj)
+    , h2 "Quick Start"
+    , codeBlock "bash"
+        ( "# Build all packages\n\
+          \cabal build all\n\n\
+          \# Run full test suite\n\
+          \cabal test all\n\n\
+          \# Run physical verification gates\n\
+          \./bin/" <> pName <> "-verify" )
+    , h2 "Documentation"
+    , bulletList
+        [ inlines [linkInline (code "AGENTS.md") "AGENTS.md", plain " — Advisory context and rules for AI assistants."]
+        , inlines [linkInline (code "PLAN.md") "PLAN.md", plain " — Strategic roadmap and phase delivery schedule."]
+        , inlines [linkInline (code "STATE.md") "STATE.md", plain " — Active operational session frontier."]
+        , inlines [linkInline (code "docs/INDEX.md") "docs/INDEX.md", plain " — Documentation corpus inventory."]
+        , inlines [linkInline (code "docs/TUTORIAL.md") "docs/TUTORIAL.md", plain " — Getting started tutorial."]
+        ]
+    , h2 "License & Attribution"
+    , bulletList
+        [ inlines [bold "License:", plain (" " <> projectLicense proj)]
+        , inlines [bold "Author:", plain (" " <> authorName auth <> " <" <> authorEmail auth <> ">")]
+        ]
     ]
 
 -- | Generates @AGENTS.md@ establishing AI coding assistant reading order and advisories.
@@ -695,89 +708,99 @@ agentsTemplate :: Project -> Text
 agentsTemplate proj =
   let pName = projectName proj
       uSlug = toUpperSlug pName
-  in T.unlines
-    [ "# AGENTS.md — Advisory Context for AI Coding Assistants"
-    , ""
-    , "Pointer file. Canonical sources win on any disagreement."
-    , ""
-    , "## What this repository is"
-    , ""
-    , "`" <> pName <> "` — " <> projectDescription proj
-    , ""
-    , "## Read first, in this order"
-    , ""
-    , "1. `README.md` — what this is, and its status."
-    , "2. `PLAN.md` & `STATE.md` — operational roadmap and active session frontier."
-    , "3. `docs/notes/" <> uSlug <> "_DESIGN.md` — canonical design notes and invariants."
-    , "4. `docs/notes/DOC_STRATEGY.md` — documentation policy: genres, lifecycle, tone."
-    , "5. `docs/INDEX.md` — corpus inventory and reading map."
-    , ""
-    , "## Subdivided operational rules (`.agents/rules/`)"
-    , ""
-    , "- [`.agents/rules/commit-attribution.md`](.agents/rules/commit-attribution.md) —"
-    , "  Linux kernel RFC 2822 trailer format (`Assisted-by:`), DCO boundaries."
-    , "- [`.agents/rules/code-navigation.md`](.agents/rules/code-navigation.md) —"
-    , "  Token-saving funnel (`./tags` symbol jump, targeted slice viewing)."
-    , "- [`.agents/rules/compiler-verification.md`](.agents/rules/compiler-verification.md) —"
-    , "  Zero-log compiler verification, tests, and zero-contamination."
-    , "- [`.agents/rules/documentation-precedence.md`](.agents/rules/documentation-precedence.md) —"
-    , "  Precedence rule (\"code wins at runtime; notes corrected regardless\")."
-    , ""
-    , "## Operational advisories"
-    , ""
-    , "1. **Design docs are load-bearing.** Stale notes must be corrected in the same change set."
-    , "2. **Commits:** descriptive-imperative subject under 72 chars, body explains why."
-    , "   AI attribution uses git trailers per `sarutahiko`: `Assisted-by: <Tool> (<Provider> / <Model>)`."
-    , "3. **Toolchain:** GHC " <> projectGhcVersion proj <> " / Cabal " <> projectCabalVersion proj <> "."
-    , "4. **Two-file loop:** Update `STATE.md` before ending or resetting a session."
+  in renderMarkdown
+    [ h1 "AGENTS.md — Advisory Context for AI Coding Assistants"
+    , para "Pointer file. Canonical sources win on any disagreement."
+    , h2 "What this repository is"
+    , para ("`" <> pName <> "` — " <> projectDescription proj)
+    , h2 "Read first, in this order"
+    , orderedList
+        [ inlines [linkInline (code "README.md") "README.md", plain " — what this is, and its status."]
+        , inlines [linkInline (code "PLAN.md") "PLAN.md", plain " & ", linkInline (code "STATE.md") "STATE.md", plain " — operational roadmap and active session frontier."]
+        , inlines [linkInline (code ("docs/notes/" <> uSlug <> "_DESIGN.md")) ("docs/notes/" <> uSlug <> "_DESIGN.md"), plain " — canonical design notes and invariants."]
+        , inlines [linkInline (code "docs/notes/DOC_STRATEGY.md") "docs/notes/DOC_STRATEGY.md", plain " — documentation policy: genres, lifecycle, tone."]
+        , inlines [linkInline (code "docs/INDEX.md") "docs/INDEX.md", plain " — corpus inventory and reading map."]
+        ]
+    , h2 "Subdivided operational rules (`.agents/rules/`)"
+    , bulletList
+        [ inlines [linkInline (code ".agents/rules/commit-attribution.md") ".agents/rules/commit-attribution.md", plain " — Linux kernel RFC 2822 trailer format (`Assisted-by:`), DCO boundaries."]
+        , inlines [linkInline (code ".agents/rules/code-navigation.md") ".agents/rules/code-navigation.md", plain " — Token-saving funnel (`./tags` symbol jump, targeted slice viewing)."]
+        , inlines [linkInline (code ".agents/rules/compiler-verification.md") ".agents/rules/compiler-verification.md", plain " — Zero-log compiler verification, tests, and zero-contamination."]
+        , inlines [linkInline (code ".agents/rules/documentation-precedence.md") ".agents/rules/documentation-precedence.md", plain " — Precedence rule (\"code wins at runtime; notes corrected regardless\")."]
+        ]
+    , h2 "Operational advisories"
+    , orderedList
+        [ plain "**Design docs are load-bearing.** Stale notes must be corrected in the same change set."
+        , plain "Commits: descriptive-imperative subject under 72 chars, body explains why. AI attribution uses git trailers per `sarutahiko`: `Assisted-by: <Tool> (<Provider> / <Model>)`."
+        , plain ("Toolchain: GHC " <> projectGhcVersion proj <> " / Cabal " <> projectCabalVersion proj <> ".")
+        , plain "Two-file loop: Update `STATE.md` before ending or resetting a session."
+        ]
     ]
 
 -- | Generates @CLAUDE.md@ pointing to canonical advisory in @AGENTS.md@.
 claudeTemplate :: Project -> Text
-claudeTemplate _ = T.unlines
-  [ "# CLAUDE.md"
-  , ""
-  , "Canonical advisory instructions are maintained in [AGENTS.md](AGENTS.md)."
+claudeTemplate _ = renderMarkdown
+  [ h1 "CLAUDE.md"
+  , paraInlines
+      [ plain "Canonical advisory instructions are maintained in "
+      , link "AGENTS.md" "AGENTS.md"
+      , plain "."
+      ]
   ]
 
 -- | Generates @PLAN.md@ tracking strategic milestones.
 planTemplate :: Project -> Text
 planTemplate proj =
   let pName = projectName proj
-  in T.unlines
-    [ "# " <> pName <> " — Strategic Roadmap (`PLAN.md`)"
-    , ""
-    , "**Status:** ACTIVE STRATEGIC ROADMAP  "
-    , "**Scope:** " <> projectDescription proj <> "  "
-    , "**Documentation:** [`docs/INDEX.md`](docs/INDEX.md)  "
-    , "**Operational State:** [`STATE.md`](STATE.md)"
-    , ""
-    , "---"
-    , ""
-    , "## Phase 1: Foundational Architecture [ACTIVE]"
-    , ""
-    , "- [x] **Milestone 1.1:** Canonical Workspace Scaffolding"
-    , "  - Multi-package hierarchy, documentation corpus, and verification harnesses grounded."
-    , "- [ ] **Milestone 1.2:** Core Implementation & Domain Logic"
-    , "  - Core abstractions, unit tests, and property test verification."
+  in renderMarkdown
+    [ h1 (pName <> " — Strategic Roadmap (`PLAN.md`)")
+    , paraInlines
+        [ bold "Status:"
+        , plain " ACTIVE STRATEGIC ROADMAP  \n"
+        , bold "Scope:"
+        , plain (" " <> projectDescription proj <> "  \n")
+        , bold "Documentation:"
+        , plain " "
+        , linkInline (code "docs/INDEX.md") "docs/INDEX.md"
+        , plain "  \n"
+        , bold "Operational State:"
+        , plain " "
+        , linkInline (code "STATE.md") "STATE.md"
+        ]
+    , hr
+    , h2 "Phase 1: Foundational Architecture [ACTIVE]"
+    , bulletList
+        [ inlines
+            [ plain "[x] "
+            , bold "Milestone 1.1:"
+            , plain " Canonical Workspace Scaffolding\n  - Multi-package hierarchy, documentation corpus, and verification harnesses grounded."
+            ]
+        , inlines
+            [ plain "[ ] "
+            , bold "Milestone 1.2:"
+            , plain " Core Implementation & Domain Logic\n  - Core abstractions, unit tests, and property test verification."
+            ]
+        ]
     ]
 
 -- | Generates @STATE.md@ tracking active session frontier.
 stateTemplate :: Project -> Text
 stateTemplate proj =
   let pName = projectName proj
-  in T.unlines
-    [ "# " <> pName <> " — State"
-    , ""
-    , "Operational frontier. Read with [`PLAN.md`](PLAN.md); update before ending a session."
-    , ""
-    , "## Where we are"
-    , ""
-    , "The workspace skeleton for `" <> pName <> "` is initialized and verified under GHC " <> projectGhcVersion proj <> "."
-    , ""
-    , "## Active Frontier"
-    , "- Complete Milestone 1.2 core domain logic."
-    , "- Maintain 5-gate physical verification via `./bin/" <> pName <> "-verify`."
+  in renderMarkdown
+    [ h1 (pName <> " — State")
+    , paraInlines
+        [ plain "Operational frontier. Read with "
+        , linkInline (code "PLAN.md") "PLAN.md"
+        , plain "; update before ending a session."
+        ]
+    , h2 "Where we are"
+    , para ("The workspace skeleton for `" <> pName <> "` is initialized and verified under GHC " <> projectGhcVersion proj <> ".")
+    , h2 "Active Frontier"
+    , bulletList
+        [ plain "Complete Milestone 1.2 core domain logic."
+        , plain ("Maintain 5-gate physical verification via `./bin/" <> pName <> "-verify`.")
+        ]
     ]
 
 --------------------------------------------------------------------------------
@@ -795,41 +818,39 @@ agentRuleEntries _ =
 
 -- | Generates `.agents/rules/commit-attribution.md`.
 ruleCommitAttributionTemplate :: Text
-ruleCommitAttributionTemplate = T.unlines
-  [ "# Commit Attribution Rules"
-  , ""
-  , "AI attribution uses git trailers per `sarutahiko`:"
-  , "`Assisted-by: <Tool> (<Provider> / <Model>)` (or `<Tool>`) and optional `Orchestrated-by: <Engine>`."
-  , "Never `Co-authored-by:` or `Signed-off-by:` for AI tools (only humans certify the DCO)."
+ruleCommitAttributionTemplate = renderMarkdown
+  [ h1 "Commit Attribution Rules"
+  , para "AI attribution uses git trailers per `sarutahiko`:\n\
+         \`Assisted-by: <Tool> (<Provider> / <Model>)` (or `<Tool>`) and optional `Orchestrated-by: <Engine>`."
+  , para "Never `Co-authored-by:` or `Signed-off-by:` for AI tools (only humans certify the DCO)."
   ]
 
 -- | Generates `.agents/rules/code-navigation.md`.
 ruleCodeNavigationTemplate :: Text
-ruleCodeNavigationTemplate = T.unlines
-  [ "# Code Navigation Rules"
-  , ""
-  , "Always follow the Progressive Disclosure Funnel:"
-  , "1. Level 0: Global Navigation (`docs/INDEX.md`, `tags` file)"
-  , "2. Level 1: Structural Outline (module export lists)"
-  , "3. Level 2: Targeted Slice (`view_file` StartLine / EndLine)"
+ruleCodeNavigationTemplate = renderMarkdown
+  [ h1 "Code Navigation Rules"
+  , para "Always follow the Progressive Disclosure Funnel:"
+  , orderedList
+      [ plain "Level 0: Global Navigation (`docs/INDEX.md`, `tags` file)"
+      , plain "Level 1: Structural Outline (module export lists)"
+      , plain "Level 2: Targeted Slice (`view_file` StartLine / EndLine)"
+      ]
   ]
 
 -- | Generates `.agents/rules/compiler-verification.md`.
 ruleCompilerVerificationTemplate :: Text
-ruleCompilerVerificationTemplate = T.unlines
-  [ "# Compiler Verification Rules"
-  , ""
-  , "Maintain zero warnings under `-Wall -Wcompat -Wredundant-constraints`."
-  , "Run physical verification gates before committing."
+ruleCompilerVerificationTemplate = renderMarkdown
+  [ h1 "Compiler Verification Rules"
+  , para "Maintain zero warnings under `-Wall -Wcompat -Wredundant-constraints`."
+  , para "Run physical verification gates before committing."
   ]
 
 -- | Generates `.agents/rules/documentation-precedence.md`.
 ruleDocPrecedenceTemplate :: Text
-ruleDocPrecedenceTemplate = T.unlines
-  [ "# Documentation Precedence Rules"
-  , ""
-  , "Precedence rule: Code wins at runtime; notes corrected regardless."
-  , "Design docs are load-bearing. Update notes when implementation changes."
+ruleDocPrecedenceTemplate = renderMarkdown
+  [ h1 "Documentation Precedence Rules"
+  , para "Precedence rule: Code wins at runtime; notes corrected regardless."
+  , para "Design docs are load-bearing. Update notes when implementation changes."
   ]
 
 --------------------------------------------------------------------------------
@@ -855,65 +876,84 @@ docsIndexTemplate proj =
   let pName = projectName proj
       uSlug = toUpperSlug pName
       pkgs = projectPackages proj
-  in T.unlines
-    [ "# " <> pName <> " Documentation Index"
-    , ""
-    , "Welcome to the `" <> pName <> "` technical documentation corpus."
-    , ""
-    , "## Core Orientation"
-    , "- [`README.md`](../README.md) — High-level project overview and quick start."
-    , "- [`AGENTS.md`](../AGENTS.md) — AI coding assistant guidance and rules."
-    , "- [`PLAN.md`](../PLAN.md) — Strategic roadmap."
-    , "- [`STATE.md`](../STATE.md) — Active operational frontier."
-    , "- [`TUTORIAL.md`](TUTORIAL.md) — Getting started tutorial."
-    , "- [`NEWBIE_GUIDE.md`](NEWBIE_GUIDE.md) — Token-conservation funnel and navigation."
-    , "- [`MAINTAINER_GUIDE.md`](MAINTAINER_GUIDE.md) — Maintenance and verification gates."
-    , ""
-    , "## Design Notes (`docs/notes/`)"
-    , "- [`" <> uSlug <> "_DESIGN.md`](notes/" <> uSlug <> "_DESIGN.md) — Canonical design notes."
-    , "- [`DOC_STRATEGY.md`](notes/DOC_STRATEGY.md) — Documentation strategy and precedence rules."
-    , "- [`COMMIT_ATTRIBUTION.md`](notes/COMMIT_ATTRIBUTION.md) — Commit attribution standards."
-    , ""
-    , "## Active Packages"
-    ] <> T.unlines [ "- [`packages/" <> packageName pkg <> "/`](../packages/" <> packageName pkg <> "/) — " <> packageSynopsis pkg | pkg <- pkgs ]
+  in renderMarkdown
+    [ h1 (pName <> " Documentation Index")
+    , para ("Welcome to the `" <> pName <> "` technical documentation corpus.")
+    , h2 "Core Orientation"
+    , bulletList
+        [ inlines [linkInline (code "README.md") "../README.md", plain " — High-level project overview and quick start."]
+        , inlines [linkInline (code "AGENTS.md") "../AGENTS.md", plain " — AI coding assistant guidance and rules."]
+        , inlines [linkInline (code "PLAN.md") "../PLAN.md", plain " — Strategic roadmap."]
+        , inlines [linkInline (code "STATE.md") "../STATE.md", plain " — Active operational frontier."]
+        , inlines [linkInline (code "TUTORIAL.md") "TUTORIAL.md", plain " — Getting started tutorial."]
+        , inlines [linkInline (code "NEWBIE_GUIDE.md") "NEWBIE_GUIDE.md", plain " — Token-conservation funnel and navigation."]
+        , inlines [linkInline (code "MAINTAINER_GUIDE.md") "MAINTAINER_GUIDE.md", plain " — Maintenance and verification gates."]
+        ]
+    , h2 "Design Notes (`docs/notes/`)"
+    , bulletList
+        [ inlines [linkInline (code (uSlug <> "_DESIGN.md")) ("notes/" <> uSlug <> "_DESIGN.md"), plain " — Canonical design notes."]
+        , inlines [linkInline (code "DOC_STRATEGY.md") "notes/DOC_STRATEGY.md", plain " — Documentation strategy and precedence rules."]
+        , inlines [linkInline (code "COMMIT_ATTRIBUTION.md") "notes/COMMIT_ATTRIBUTION.md", plain " — Commit attribution standards."]
+        ]
+    , h2 "Active Packages"
+    , bulletList
+        [ inlines [linkInline (code ("packages/" <> packageName pkg <> "/")) ("../packages/" <> packageName pkg <> "/"), plain (" — " <> packageSynopsis pkg)]
+        | pkg <- pkgs
+        ]
+    ]
 
 -- | Generates `docs/TUTORIAL.md`.
 docsTutorialTemplate :: Project -> Text
 docsTutorialTemplate proj =
   let pName = projectName proj
       uSlug = toUpperSlug pName
-  in T.unlines
-    [ "# Getting Started with " <> pName
-    , ""
-    , "A foundational tutorial for working with `" <> pName <> "`."
-    , ""
-    , "## 1. Concepts"
-    , ""
-    , "`" <> pName <> "` provides modular components structured around " <> projectDescription proj <> "."
-    , ""
-    , "## 2. Navigation"
-    , ""
-    , "See [`docs/INDEX.md`](INDEX.md), [`docs/NEWBIE_GUIDE.md`](NEWBIE_GUIDE.md), and [`docs/notes/" <> uSlug <> "_DESIGN.md`](notes/" <> uSlug <> "_DESIGN.md)."
+  in renderMarkdown
+    [ h1 ("Getting Started with " <> pName)
+    , para ("A foundational tutorial for working with `" <> pName <> "`.")
+    , h2 "1. Concepts"
+    , para ("`" <> pName <> "` provides modular components structured around " <> projectDescription proj <> ".")
+    , h2 "2. Navigation"
+    , paraInlines
+        [ plain "See "
+        , linkInline (code "docs/INDEX.md") "INDEX.md"
+        , plain ", "
+        , linkInline (code "docs/NEWBIE_GUIDE.md") "NEWBIE_GUIDE.md"
+        , plain ", and "
+        , linkInline (code ("docs/notes/" <> uSlug <> "_DESIGN.md")) ("notes/" <> uSlug <> "_DESIGN.md")
+        , plain "."
+        ]
     ]
 
 -- | Generates `docs/NEWBIE_GUIDE.md`.
 docsNewbieGuideTemplate :: Project -> Text
 docsNewbieGuideTemplate proj =
   let pName = projectName proj
-  in T.unlines
-    [ "# " <> pName <> " Newbie Quickstart & Token-Conservation Guide"
-    , ""
-    , "**Parent Strategy:** [`docs/notes/DOC_STRATEGY.md`](notes/DOC_STRATEGY.md)  "
-    , "**Corpus Inventory:** [`docs/INDEX.md`](INDEX.md)  "
-    , "**Tutorial:** [`docs/TUTORIAL.md`](TUTORIAL.md)  "
-    , "**Maintainer Guide:** [`docs/MAINTAINER_GUIDE.md`](MAINTAINER_GUIDE.md)"
-    , ""
-    , "## 1. The Core Invariant: Never Dump Whole Modules"
-    , ""
-    , "Always follow the Progressive Disclosure Funnel:"
-    , "Level 0: Global Navigation (`docs/INDEX.md`)"
-    , "Level 1: Structural Outline"
-    , "Level 2: Targeted Slice"
+  in renderMarkdown
+    [ h1 (pName <> " Newbie Quickstart & Token-Conservation Guide")
+    , paraInlines
+        [ bold "Parent Strategy:"
+        , plain " "
+        , linkInline (code "docs/notes/DOC_STRATEGY.md") "notes/DOC_STRATEGY.md"
+        , plain "  \n"
+        , bold "Corpus Inventory:"
+        , plain " "
+        , linkInline (code "docs/INDEX.md") "INDEX.md"
+        , plain "  \n"
+        , bold "Tutorial:"
+        , plain " "
+        , linkInline (code "docs/TUTORIAL.md") "TUTORIAL.md"
+        , plain "  \n"
+        , bold "Maintainer Guide:"
+        , plain " "
+        , linkInline (code "docs/MAINTAINER_GUIDE.md") "MAINTAINER_GUIDE.md"
+        ]
+    , h2 "1. The Core Invariant: Never Dump Whole Modules"
+    , para "Always follow the Progressive Disclosure Funnel:"
+    , bulletList
+        [ plain "Level 0: Global Navigation (`docs/INDEX.md`)"
+        , plain "Level 1: Structural Outline"
+        , plain "Level 2: Targeted Slice"
+        ]
     ]
 
 -- | Generates `docs/MAINTAINER_GUIDE.md`.
@@ -921,82 +961,87 @@ docsMaintainerGuideTemplate :: Project -> Text
 docsMaintainerGuideTemplate proj =
   let pName = projectName proj
       uSlug = toUpperSlug pName
-  in T.unlines
-    [ "# " <> pName <> " Maintainer Guide"
-    , ""
-    , "**Corpus Inventory:** [`docs/INDEX.md`](INDEX.md)  "
-    , "**Design Notes:** [`docs/notes/" <> uSlug <> "_DESIGN.md`](notes/" <> uSlug <> "_DESIGN.md)  "
-    , "**Attribution:** [`docs/notes/COMMIT_ATTRIBUTION.md`](notes/COMMIT_ATTRIBUTION.md)"
-    , ""
-    , "## Verification Gates"
-    , ""
-    , "Every commit must pass all five verification gates via `./bin/" <> pName <> "-verify`."
+  in renderMarkdown
+    [ h1 (pName <> " Maintainer Guide")
+    , paraInlines
+        [ bold "Corpus Inventory:"
+        , plain " "
+        , linkInline (code "docs/INDEX.md") "INDEX.md"
+        , plain "  \n"
+        , bold "Design Notes:"
+        , plain " "
+        , linkInline (code ("docs/notes/" <> uSlug <> "_DESIGN.md")) ("notes/" <> uSlug <> "_DESIGN.md")
+        , plain "  \n"
+        , bold "Attribution:"
+        , plain " "
+        , linkInline (code "docs/notes/COMMIT_ATTRIBUTION.md") "notes/COMMIT_ATTRIBUTION.md"
+        ]
+    , h2 "Verification Gates"
+    , para ("Every commit must pass all five verification gates via `./bin/" <> pName <> "-verify`.")
     ]
 
 -- | Generates `docs/notes/<PROJECT>_DESIGN.md`.
 docsDesignTemplate :: Project -> Text
 docsDesignTemplate proj =
   let pName = projectName proj
-  in T.unlines
-    [ "# " <> pName <> " — Design Decisions & Invariants"
-    , ""
-    , "**Status:** CANONICAL DESIGN MONOGRAPH  "
-    , "**Parent Strategy:** [`DOC_STRATEGY.md`](DOC_STRATEGY.md)  "
-    , "**Documentation Index:** [`../INDEX.md`](../INDEX.md)"
-    , ""
-    , "---"
-    , ""
-    , "## Architectural Decisions"
-    , ""
-    , "### Decision D1: Modular Workspace Architecture"
-    , ""
-    , "The repository is decomposed into fine-grained packages under `packages/`."
-    , ""
-    , "### Decision D2: Verification Invariants"
-    , ""
-    , "Adheres to Note [Ecosystem Standardization Invariants] " <> refStandardization <> "."
-    , ""
-    , "---"
-    , ""
-    , "## In-Code Design Notes"
-    , ""
-    , "### Note [Core Architecture]"
-    , tagCoreArch
-    , ""
-    , "Defines foundational design invariants for `" <> pName <> "`."
+  in renderMarkdown
+    [ h1 (pName <> " — Design Decisions & Invariants")
+    , paraInlines
+        [ bold "Status:"
+        , plain " CANONICAL DESIGN MONOGRAPH  \n"
+        , bold "Parent Strategy:"
+        , plain " "
+        , linkInline (code "DOC_STRATEGY.md") "DOC_STRATEGY.md"
+        , plain "  \n"
+        , bold "Documentation Index:"
+        , plain " "
+        , linkInline (code "../INDEX.md") "../INDEX.md"
+        ]
+    , hr
+    , h2 "Architectural Decisions"
+    , h3 "Decision D1: Modular Workspace Architecture"
+    , para "The repository is decomposed into fine-grained packages under `packages/`."
+    , h3 "Decision D2: Verification Invariants"
+    , para ("Adheres to Note [Ecosystem Standardization Invariants] " <> refStandardization <> ".")
+    , hr
+    , h2 "In-Code Design Notes"
+    , h3 "Note [Core Architecture]"
+    , Paragraph [tagDef "note-core-architecture"]
+    , para ("Defines foundational design invariants for `" <> pName <> "`.")
     ]
 
 -- | Generates `docs/notes/DOC_STRATEGY.md`.
 docsStrategyTemplate :: Project -> Text
 docsStrategyTemplate proj =
   let pName = projectName proj
-  in T.unlines
-    [ "# Documentation Strategy & Policy"
-    , ""
-    , "**Project:** " <> pName <> "  "
-    , "**Index:** [`../INDEX.md`](../INDEX.md)"
-    , ""
-    , "## Precedence Rule (§4)"
-    , ""
-    , "Code wins at runtime; notes corrected regardless. Stale design documentation must be remediated in the same commit."
+  in renderMarkdown
+    [ h1 "Documentation Strategy & Policy"
+    , paraInlines
+        [ bold "Project:"
+        , plain (" " <> pName <> "  \n")
+        , bold "Index:"
+        , plain " "
+        , linkInline (code "../INDEX.md") "../INDEX.md"
+        ]
+    , h2 "Precedence Rule (§4)"
+    , para "Code wins at runtime; notes corrected regardless. Stale design documentation must be remediated in the same commit."
     ]
 
 -- | Generates `docs/notes/COMMIT_ATTRIBUTION.md`.
 docsCommitAttributionTemplate :: Project -> Text
 docsCommitAttributionTemplate proj =
   let pName = projectName proj
-  in T.unlines
-    [ "# Commit Attribution & Trailer Standards"
-    , ""
-    , "**Project:** " <> pName <> "  "
-    , "**Index:** [`../INDEX.md`](../INDEX.md)  "
-    , "**Strategy:** [`DOC_STRATEGY.md`](DOC_STRATEGY.md)"
-    , ""
-    , "## Format"
-    , ""
-    , "```"
-    , "Assisted-by: <Tool> (<Provider> / <Model>)"
-    , "```"
+  in renderMarkdown
+    [ h1 "Commit Attribution & Trailer Standards"
+    , paraInlines
+        [ bold "Project:"
+        , plain (" " <> pName <> "  \n")
+        , bold "Index:"
+        , plain " "
+        , linkInline (code "../INDEX.md") "../INDEX.md"
+        ]
+    , h2 "Format"
+    , plainCodeBlock "Assisted-by: <Tool> (<Provider> / <Model>)"
     ]
 
 --------------------------------------------------------------------------------
@@ -1078,19 +1123,13 @@ packageCabalTemplate proj pkg =
 packageReadmeTemplate :: Project -> PackageSpec -> Text
 packageReadmeTemplate proj pkg =
   let pName = packageName pkg
-  in T.unlines
-    [ "# " <> pName
-    , ""
-    , packageSynopsis pkg
-    , ""
-    , "## Modules"
-    , ""
-    ] <> T.unlines [ "- `" <> m <> "`" | m <- packageExposes pkg ] <>
-    T.unlines
-    [ ""
-    , "## License"
-    , ""
-    , projectLicense proj
+  in renderMarkdown
+    [ h1 pName
+    , para (packageSynopsis pkg)
+    , h2 "Modules"
+    , bulletList [ code m | m <- packageExposes pkg ]
+    , h2 "License"
+    , para (projectLicense proj)
     ]
 
 -- | Generates an exposed module with comprehensive Haddock documentation (>50% comments).

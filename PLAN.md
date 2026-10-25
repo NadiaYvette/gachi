@@ -41,11 +41,13 @@
   - Grounded declarative Dhall types for project metadata, modular package DAGs, Cabal 3.18 / GHC 9.14 stanzas, license terms (EUPL-1.2), and author information in `Gachi.Schema.Project` and `Gachi.Schema.Dhall`.
   - Implemented strongly-typed deserialization using `polytropos-dhall`'s `FromDhall` / `ToDhall` via `GenericDhall` and isomorphic open row representations (`ProjectRec`, `AuthorRec`, `PackageRec`, `RemoteRec`) backed by contiguous Polytropos `RowRep` storage.
   - Verified 12/12 passing Hspec tests validating nominal decoding, open row roundtripping, pretty-printing, and safe error handling.
-- [x] **Milestone 2.2:** Multi-Package Workspace Scaffolding (`gachi-scaffold`)
+- [x] **Milestone 2.2:** Multi-Package Workspace Scaffolding & Structured Markdown AST (`gachi-scaffold`)
   - Grounded declarative scaffolding engine `packages/gachi-scaffold` synthesizing complete canonical ecosystem workspaces: multi-package hierarchy (`packages/*/src`, `packages/*/test`, `.cabal`), toolchain configs (`cabal.project`, `cabal.project.local.example`, `.hlint.yaml`, `.gitmessage`, `.githooks/`), documentation corpus (`docs/notes/`, `docs/INDEX.md`, `docs/TUTORIAL.md`, `docs/NEWBIE_GUIDE.md`, `docs/MAINTAINER_GUIDE.md`, `docs/notes/DOC_STRATEGY.md`, `docs/notes/COMMIT_ATTRIBUTION.md`), and operational files (`PLAN.md`, `STATE.md`, `AGENTS.md`, `CLAUDE.md`, `.agents/rules/`).
+  - Implemented lean, pure-Haskell GitHub-Flavored Markdown (GFM) / CommonMark AST and deterministic pretty-printer in `Gachi.Scaffold.Markdown` with typed blocks (`Heading`, `Paragraph`, `FencedCode`, `BulletList`, `OrderedList`, `Table`, `ThematicBreak`, `RawBlock`), inlines (`Plain`, `Bold`, `Italic`, `Code`, `Link`, `TagRef`, `TagDef`, `Inlines`), and dynamic table column measurement and alignment.
+  - Refactored all repository documentation and operational governance templates in `Gachi.Scaffold.Templates` to construct structured `[Block]` AST representations and render via `renderMarkdown` rather than raw string concatenation.
   - Implemented turnkey 5-gate physical verification script generators (`bin/<name>-verify`, `bin/generate-tags`, `bin/<name>-tagref`, `bin/<name>-linkcheck`, `bin/<name>-cloc`).
   - Canonically grounded `Note [Ecosystem Standardization Invariants]` (`[ref:note-ecosystem-standardization]`) in `Gachi.Scaffold`.
-  - Verified 15/15 passing Hspec tests validating pure generation, filesystem materialization, permission bits, error modes (`FailOnExisting`, `SkipExisting`, `OverwriteExisting`), and physical gate self-consistency on generated target projects.
+  - Verified 20/20 passing Hspec tests validating GFM AST pretty-printing, dynamic table layout, pure generation, filesystem materialization modes (`FailOnExisting`, `SkipExisting`, `OverwriteExisting`), and physical gate self-consistency on generated target projects.
 - [ ] **Milestone 2.3:** CLI Tooling (`gachi init`)
   - Interactive and headless CLI modes to instantiate new projects or add satellite packages to existing workspaces.
 

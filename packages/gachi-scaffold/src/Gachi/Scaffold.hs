@@ -110,6 +110,35 @@ module Gachi.Scaffold
   , packageModuleTemplate
   , packageTestTemplate
 
+    -- * Markdown AST & Pretty-Printing
+  , Block(..)
+  , Inline(..)
+  , renderMarkdown
+  , renderBlock
+  , renderInline
+  , h1
+  , h2
+  , h3
+  , h4
+  , para
+  , paraInlines
+  , codeBlock
+  , plainCodeBlock
+  , bulletList
+  , orderedList
+  , table
+  , hr
+  , rawBlock
+  , plain
+  , bold
+  , italic
+  , code
+  , link
+  , linkInline
+  , tagRef
+  , tagDef
+  , inlines
+
     -- * String Utilities
   , defaultModuleName
   , moduleToFilePath
@@ -120,6 +149,35 @@ import Gachi.Scaffold.Engine
   ( generateAndWriteScaffold
   , generateProjectScaffold
   , writeScaffold
+  )
+import Gachi.Scaffold.Markdown
+  ( Block(..)
+  , Inline(..)
+  , bold
+  , bulletList
+  , code
+  , codeBlock
+  , h1
+  , h2
+  , h3
+  , h4
+  , hr
+  , inlines
+  , italic
+  , link
+  , linkInline
+  , orderedList
+  , para
+  , paraInlines
+  , plain
+  , plainCodeBlock
+  , rawBlock
+  , renderBlock
+  , renderInline
+  , renderMarkdown
+  , table
+  , tagDef
+  , tagRef
   )
 import Gachi.Scaffold.Templates
   ( allProjectEntries

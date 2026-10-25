@@ -15,6 +15,7 @@ library
   exposed-modules:
     Gachi.Scaffold
     Gachi.Scaffold.Types
+    Gachi.Scaffold.Markdown
     Gachi.Scaffold.Templates
     Gachi.Scaffold.Engine
   hs-source-dirs: src
