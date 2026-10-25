@@ -48,8 +48,12 @@
   - Implemented turnkey 5-gate physical verification script generators (`bin/<name>-verify`, `bin/generate-tags`, `bin/<name>-tagref`, `bin/<name>-linkcheck`, `bin/<name>-cloc`).
   - Canonically grounded `Note [Ecosystem Standardization Invariants]` (`[ref:note-ecosystem-standardization]`) in `Gachi.Scaffold`.
   - Verified 20/20 passing Hspec tests validating GFM AST pretty-printing, dynamic table layout, pure generation, filesystem materialization modes (`FailOnExisting`, `SkipExisting`, `OverwriteExisting`), and physical gate self-consistency on generated target projects.
-- [ ] **Milestone 2.3:** CLI Tooling (`gachi init`)
-  - Interactive and headless CLI modes to instantiate new projects or add satellite packages to existing workspaces.
+- [x] **Milestone 2.3:** CLI Tooling (`gachi init`)
+  - Implemented turnkey unified CLI binary in `packages/gachi-cli/` (`Gachi.CLI`, `Gachi.CLI.Init`, `Gachi.CLI.Options`, `app/Main.hs`).
+  - Added support for `--config <file.dhall>`, `--target-dir <path>`, `--mode <fail|skip|overwrite>`, `--no-git`, `--dry-run`, and `--interactive`.
+  - Implemented hermetic Git repository initialization (`git init`), commit template pinning (`commit.template = .gitmessage`), and hook activation (`core.hooksPath = .githooks`).
+  - Verified 10/10 passing Hspec test suite covering option parsing, Dhall decoding, headless workspace generation, and write modes.
+  - Passed all 5 physical verification gates in `./bin/gachi-verify` with 0 HLint hints, 0 broken links, 0 dangling tags, and >= 50% comment density in production code.
 
 ---
 

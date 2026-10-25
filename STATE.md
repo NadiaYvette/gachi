@@ -11,6 +11,7 @@ The foundational package `packages/gachi-core` is scaffolded with pure osteologi
 - **`gachi-core`**: Core osteological primitives, contiguous unboxed memory representations, atomic chattering synchronization, and invariant validation.
 - **`gachi-schema`**: Declarative Dhall schemas, `polytropos-dhall` codecs, isomorphic Polytropos open row representations (`ProjectRec`), and turnkey project templates.
 - **`gachi-scaffold`**: Declarative multi-package workspace scaffolding engine, canonical asset tree synthesis, execution modes, and turnkey physical verification harnesses.
+- **`gachi-cli`**: Turnkey command-line interface executable (`gachi`), optparse-applicative option parsing hierarchy, declarative Dhall resolution, interactive wizard, and hermetic Git governance automation.
 
 ### Code Quality & Static Analysis Gates [COMPLETED]
 - **Toolchain**: GHC 9.14.1 / Cabal 3.18.1.0 targeting `-Wall -Wcompat -Wredundant-constraints`.
@@ -25,8 +26,9 @@ The foundational package `packages/gachi-core` is scaffolded with pure osteologi
   - **Milestone 1.1:** Canonical multi-forge repository skeleton grounded with strict git hooks and 5 verification gates.
   - **Milestone 1.2:** Grounded contiguous unboxed osteological primitives (`OsteoSegment a` and `OsteoBytes`), zero-allocation $O(1)$ indexing, zero-copy slicing, and contiguous `Skeleton` bone-and-joint graphs with 12/12 passing Hspec tests.
   - **Milestone 1.3:** Canonical GHC Notes architecture grounded across `Gachi.Osteology`, `Gachi.Core`, tests, maintainer guide, and design monographs with 10 tags, 60 references, 0 dangling references, and 0 duplicate tags verified via `./bin/gachi-tagref`.
-- **Phase 2 In Progress (`gachi init`):**
+- **Phase 2 Completed (`gachi init`):**
   - **Milestone 2.1 Completed:** Grounded declarative Dhall project schemas in `packages/gachi-schema` with `FromDhall` / `ToDhall` via `GenericDhall`, Polytropos open row isomorphisms (`ProjectRec` / `RowRep`), turnkey Dhall templates, and 12/12 passing Hspec tests.
   - **Milestone 2.2 Completed:** Grounded declarative scaffolding engine `packages/gachi-scaffold`, lean GFM AST and deterministic pretty-printer (`Gachi.Scaffold.Markdown`), auto-aligned table layout engine, and full template generator refactoring across all repository documentation and operational governance assets. Verified 20/20 passing Hspec tests validating GFM AST pretty-printing, dynamic table layout, pure generation, and physical gate self-consistency on generated target projects. Grounded `Note [Ecosystem Standardization Invariants]` (`[ref:note-ecosystem-standardization]`) in `Gachi.Scaffold`.
-  - **Advancing Milestone 2.3:** CLI Tooling (`gachi init` wizard and headless runner).
-- **Verification Status:** All 5 physical verification gates (`bin/gachi-verify`) passing cleanly with 0 warnings, 0 hints, and 0 dangling tagref references across 3 packages (44/44 total Hspec tests passing).
+  - **Milestone 2.3 Completed:** Grounded turnkey CLI binary `packages/gachi-cli/` (`Gachi.CLI`, `Gachi.CLI.Init`, `Gachi.CLI.Options`, `app/Main.hs`) and launcher script `bin/gachi`. Added dual-path project resolution (typed Dhall vs CLI flags / interactive prompt), non-destructive write modes (`FailOnExisting`, `SkipExisting`, `OverwriteExisting`), dry-run preview, and automated Git governance pinning (`core.hooksPath = .githooks`, `commit.template = .gitmessage`). Grounded `Note [CLI Ergonomics and Non-Destructive Initialization]` (`[ref:note-cli-init-ergonomics]`). Verified 10/10 passing Hspec tests in `packages/gachi-cli/test/Main.hs`.
+- **Next Frontier (Phase 3):** Chattering Configuration Propagation (`gachi sync`).
+- **Verification Status:** All 5 physical verification gates (`bin/gachi-verify`) passing cleanly with 0 warnings, 0 hints, 0 dangling tagref references, 0 broken markdown links, and 50.1% comment density in production code across 4 packages (54/54 total Hspec tests passing).

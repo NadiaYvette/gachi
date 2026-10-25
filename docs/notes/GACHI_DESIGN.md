@@ -83,3 +83,5 @@ In software systems engineering, two chronic failure modes plague multi-reposito
 - **Note [Non-Destructive Skeleton Overlay]**
   [tag:note-nondestructive-retrofit]
   Specifies the diagnostic analyzer and non-destructive file overlay semantics for adopting legacy projects into the canonical ecosystem skeleton.
+- **Note [CLI Ergonomics and Non-Destructive Initialization]** (`Gachi.CLI.Init`) [ref:note-cli-init-ergonomics]:
+  Defines dual-path specification, execution modes, turnkey Git governance, and five-gate readiness for `gachi init`.

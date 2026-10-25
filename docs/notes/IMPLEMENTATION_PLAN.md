@@ -381,3 +381,29 @@ Quality assurance in `gachi` is enforced through continuous physical verificatio
 |---|---|---|---|
 | **v1.0** | 2026-10-24 | Antigravity (Google / gemini-3.8-pro) | Initial canonical implementation plan establishing Phases 1–6, multi-package architecture, verification gates, and risk mitigations. |
 | **v1.1** | 2026-10-24 | Antigravity (Google / gemini-3.8-pro) | Integrate kernmantle-polytropos effect pipeline architecture, selective gargamelle integration (pushouts, sandbox, sheaf coherence), and adopt ~/src/gongju/ as the victim project crucible. |
+| **v1.2** | 2026-10-25 | Antigravity (Google / gemini-3.8-pro) | Record deferred tooling & exploration workqueue (§7) covering updo, shake, okf, pandoc, dhall-haskell, and codec substrates. |
+
+---
+
+## 7. Deferred Tooling & Exploration Workqueue
+
+The following architectural investigations and external integrations are formally logged in our long-term research workqueue to evaluate as the ecosystem evolves:
+
+1. **`~/src/updo/` (Dhall-Parameterized Project Generation & Upgrades):**
+   - **Scope:** Evaluate `updo`'s package dependency constraint solver, multi-version GHC upgrade matrix (`ghc-version-projects.mk`, `ghc-upgrade-projects.mk`), and Dhall-based package specifications (`types.dhall`, `package.dhall`).
+   - **Integration Point:** Potential synergy with `gachi sync` (Milestone 3.2) and `gachi retrofit` (Phase 4) for dependency constraint reconciliation and automated GHC upgrade migrations.
+2. **`~/src/shake/` (Monadic Dynamic Dependency Build System):**
+   - **Scope:** Evaluate Shake's dynamic dependency graph scheduling, suspension, and incremental file caching for high-speed cross-repository synchronization.
+   - **Integration Point:** Potential execution engine underneath `gachi sync` and `gachi doctor --sheaf` when auditing hundreds of interconnected files across `~/src/*`.
+3. **`~/src/okf/` (Profunctor Document & Frontmatter Pipelines):**
+   - **Scope:** Investigate `okf-core`'s document representations, YAML frontmatter codecs, and profunctor pipeline transformations.
+   - **Integration Point:** Advanced document generation pipelines in `Gachi.Scaffold.Markdown` when bridging structured frontmatter with rich GFM bodies.
+4. **`~/src/pandoc/` (Bidirectional Document AST Bridging):**
+   - **Scope:** General Pandoc AST bridge allowing lossless roundtripping between Polytropos records, Dhall models, and arbitrary document targets (PDF, LaTeX, HTML, EPUB).
+   - **Integration Point:** Defer full Pandoc dependency to an opt-in satellite package to preserve `gachi-scaffold`'s lean, zero-transitive-dependency footprint.
+5. **`~/src/dhall-haskell/` (Template Haskell Lift Fixes & Dhall Markdown Rendering):**
+   - **Scope:** Maintain local fork patches for the Template Haskell `Lift` instance error in `dhall 1.42.3` under GHC 9.14; explore native Dhall AST to Markdown rendering expressions.
+   - **Integration Point:** Upstream contribution or mirror across Disroot, Framagit, GitCode, and Radicle.
+6. **`~/src/codec/` & `~/src/binary-bits/` (Profunctor Codecs & Bit-Level Serialization):**
+   - **Scope:** Evaluate profunctor codecs for zero-copy binary serialization of osteological state snapshots (`gachi plan`) and network replication.
+   - **Integration Point:** Low-level storage encoding in `packages/gachi-plan` and `packages/gachi-core`.
