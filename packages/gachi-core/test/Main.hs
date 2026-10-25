@@ -128,7 +128,7 @@ main = hspec do
       let seg = fromListOsteo [1, 2, 3, 4, 5 :: Int]
           mapped = fmap (* 10) seg
       toListOsteo mapped `shouldBe` [10, 20, 30, 40, 50]
-      foldr (+) 0 seg `shouldBe` 15
+      sum seg `shouldBe` 15
       length seg `shouldBe` 5
       null seg `shouldBe` False
       null (emptySegment :: OsteoSegment Int) `shouldBe` True

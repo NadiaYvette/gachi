@@ -264,6 +264,17 @@ resolveAssetPath proj asset =
 --
 -- Encapsulates the entire ecosystem contract: which dimensions are active,
 -- which assets belong to each dimension, and how their contents are generated.
+--
+-- === Structural Invariants & Properties
+--
+-- 1. __Dimension Congruence:__ Every declared dimension in 'matrixDimensions' is
+--    represented by at least one asset in 'matrixAssets'.
+-- 2. __Unique Target Paths:__ Within a concrete project instantiation, no two
+--    assets in 'matrixAssets' resolve to the same relative file path.
+-- 3. __Pure Hermetic Generation:__ Every asset's 'assetGenerator' is a pure, total
+--    function evaluated strictly from the immutable 'Project' record.
+-- 4. __Static Analysis Friendly:__ The matrix can be audited, filtered by category,
+--    queried by path, or serialized without accessing ambient filesystem state.
 data StandardizationMatrix = StandardizationMatrix
   { matrixAssets     :: ![StandardAsset]
     -- ^ Complete list of registered standard asset specifications.
@@ -343,7 +354,12 @@ isMissing _             = False
 -- >>> let asset = StandardAsset ".hlint.yaml" CategoryLinter True False "HLint" (const "")
 -- >>> let res = AssetAuditResult asset StatusCompliant
 -- >>> isCompliant (resultStatus res)
--- True
+-- === Invariants & Verification Semantics
+--
+-- * An asset result is immutable once constructed.
+-- * Predicates like 'isCompliant', 'isDrift', and 'isMissing' project directly
+--   from 'resultStatus'.
+-- * Audit reports aggregate lists of 'AssetAuditResult' to render tabular diagnostics.
 data AssetAuditResult = AssetAuditResult
   { resultAsset  :: !StandardAsset
     -- ^ The standardized asset specification audited.
@@ -359,6 +375,23 @@ data AssetAuditResult = AssetAuditResult
 --
 -- Summarizes aggregate compliance statistics, lists all individual asset audit
 -- outcomes, and computes the overall compliance percentage.
+--
+-- === Diagnostic Metrics & Mathematical Guarantees
+--
+-- 1. __Exact Asset Partitioning:__
+--    The evaluated outcomes in 'reportResults' partition the universe of standard
+--    assets:
+--    \[
+--      \text{length}(\text{reportResults}) = \text{reportTotalAssets}
+--    \]
+-- 2. __Compliance Ratio Calculation:__
+--    The compliance percentage is bounded in \([0.0, 100.0]\):
+--    \[
+--      \text{reportCompliancePct} = \frac{\text{reportCompliantCount}}{\text{reportTotalAssets}} \times 100.0
+--    \]
+-- 3. __Observational Safety:__
+--    Audits are read-only and non-destructive. Computing an 'AuditReport' guarantees
+--    zero filesystem mutations, zero file deletions, and zero timestamp alterations.
 data AuditReport = AuditReport
   { reportTargetDir      :: !FilePath
     -- ^ Target repository filesystem path audited.

@@ -38,7 +38,7 @@ In software systems engineering, two chronic failure modes plague multi-reposito
 ### D4: Harmonic Chattering Propagation across `~/src/*` (`gachi sync`)
 - **Decision:** Upstream improvements discovered in one repository are propagated idempotently across all ecosystem checkouts (`polytropos`, `gargamelle`, `sarutahiko`, `telix`, etc.) via differential file hashing.
 - **Scope:** Covers code formatters (Fourmolu, Ormolu, rustfmt), static analysis (`.hlint.yaml`), git governance (`.gitmessage`, `.githooks/`), and agent guidance (`AGENTS.md`, `.agents/rules/`, `.agents/skills/`).
-- **Reference:** Note [Ecosystem Standardization Invariants] `[ref:note-ecosystem-standardization]`
+- **Reference:** Note [Ecosystem Standardization Invariants] `[ref:note-ecosystem-standardization]` and Note [Harmonic Chattering Synchronization and Differential Propagation] `[ref:note-harmonic-sync]`
 
 ### D5: Non-Destructive Repository Retrofitting (`gachi retrofit`)
 - **Decision:** When retrofitting existing or external codebases into the ecosystem standard, `gachi` overlays the canonical skeleton non-destructively: preserving domain source files while installing the missing documentation hierarchy, git hooks, and verification harnesses.
@@ -87,3 +87,5 @@ In software systems engineering, two chronic failure modes plague multi-reposito
   Defines dual-path specification, execution modes, turnkey Git governance, and five-gate readiness for `gachi init`.
 - **Note [Cross-Repository Standardization Matrix and Audit Semantics]** (`Gachi.Sync.Matrix`) [ref:note-standardization-matrix]:
   Defines the 9-dimensional standardization matrix, shared asset catalog, non-destructive audit engine, and harmonic configuration propagation semantics across `~/src/*` per `~/src/PLAN.md` §1.A.
+- **Note [Harmonic Chattering Synchronization and Differential Propagation]** (`Gachi.Sync.Engine`) [ref:note-harmonic-sync]:
+  Defines the mathematical idempotency guarantee \(f(f(x)) = f(x)\), pure SHA-256 differential scanning, execution modes ('DryRun', 'ApplySync'), action planning ('ActionCreate', 'ActionUpdate', 'ActionChmod', 'ActionNoOp'), and multi-repository ecosystem orchestration.

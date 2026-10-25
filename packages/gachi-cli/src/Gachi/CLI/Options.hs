@@ -175,6 +175,8 @@ data SyncOptions = SyncOptions
   , syncDryRun    :: !Bool
     -- ^ Preview differential synchronization changes without mutating filesystem (@--dry-run@).
     -- Displays unified diffs and file permission updates planned by the synchronization engine.
+  , syncAll       :: !Bool
+    -- ^ Discover and synchronize all sibling repositories across the ecosystem parent directory (@--all@ / @-a@).
   } deriving stock (Eq, Show)
 
 -- | Configuration parameters controlling Phase 4 'gachi retrofit'.
@@ -346,6 +348,7 @@ initOptionsParser = InitOptions
 -- Parses flags for cross-repository configuration synchronization (Phase 3):
 -- * Target repository directory (@--target@ / @-t@).
 -- * Dry-run simulation switch (@--dry-run@).
+-- * All repositories discovery switch (@--all@ / @-a@).
 syncOptionsParser :: Parser SyncOptions
 syncOptionsParser = SyncOptions
   <$> optional
@@ -359,6 +362,11 @@ syncOptionsParser = SyncOptions
   <*> switch
         ( long "dry-run"
        <> help "Preview synchronization diffs without mutating filesystem"
+        )
+  <*> switch
+        ( long "all"
+       <> short 'a'
+       <> help "Discover and synchronize all repositories across the ecosystem parent directory"
         )
 
 -- | Applicative parser for 'RetrofitOptions'.

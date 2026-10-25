@@ -18,12 +18,14 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import System.Directory
   ( createDirectoryIfMissing
+  , doesFileExist
+  , executable
   , getPermissions
   , removeDirectoryRecursive
   , setPermissions
   , setOwnerExecutable
   )
-import System.FilePath ((</>))
+import System.FilePath ((</>), takeFileName)
 import Test.Hspec
 
 import Gachi.Schema.Project
@@ -50,7 +52,7 @@ withTempDir = bracket createTemp cleanupTemp
       let dir = "dist-newstyle" </> "test-audit-workspace"
       createDirectoryIfMissing True dir
       pure dir
-    cleanupTemp dir = removeDirectoryRecursive dir
+    cleanupTemp = removeDirectoryRecursive
 
 main :: IO ()
 main = hspec $ do
@@ -205,3 +207,133 @@ main = hspec $ do
 
       let str = formatAuditReportString report
       str `shouldSatisfy` (\s -> length s > 100)
+
+  describe "Gachi.Sync.Hash (Differential Cryptographic Hashing)" $ do
+    it "computes standard FIPS 180-2 SHA-256 test vectors" $ do
+      -- NIST Empty String Vector
+      sha256Text "" `shouldBe` "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      -- NIST 3-character Vector
+      sha256Text "abc" `shouldBe` "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+      -- NIST Pangram Vector
+      sha256Text "The quick brown fox jumps over the lazy dog"
+        `shouldBe` "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592"
+
+    it "computes consistent hashes across text and file representations" $ withTempDir $ \tmpDir -> do
+      let sampleText = "Author: Nadia Yvette Chambers\nLicense: EUPL-1.2\n"
+          filePath = tmpDir </> "test-hash.txt"
+      TIO.writeFile filePath sampleText
+      fileHash <- sha256File filePath
+      let textHash = sha256Text sampleText
+      fileHash `shouldBe` textHash
+
+  describe "Gachi.Sync.Engine (Harmonic Chattering Synchronization)" $ do
+    it "computes a sync plan proposing creation of all assets in an empty workspace" $ withTempDir $ \tmpDir -> do
+      plan <- computeSyncPlan tmpDir testProject canonicalMatrix
+      planProjectName plan `shouldBe` "audit-test"
+      planCreatedCount plan `shouldSatisfy` (>= 20)
+      planUpdatedCount plan `shouldBe` 0
+      planChmodCount plan `shouldBe` 0
+      isPlanClean plan `shouldBe` False
+
+    it "executes sync plan in DryRun mode without creating files on disk" $ withTempDir $ \tmpDir -> do
+      plan <- computeSyncPlan tmpDir testProject canonicalMatrix
+      res <- executeSyncPlan DryRun plan
+      resultMode res `shouldBe` DryRun
+      resultSuccess res `shouldBe` True
+      length (resultCreated res) `shouldSatisfy` (>= 20)
+      -- Assert disk files remain untouched
+      doesFileExist (tmpDir </> ".hlint.yaml") `shouldReturn` False
+      doesFileExist (tmpDir </> ".gitmessage") `shouldReturn` False
+
+    it "executes sync plan in ApplySync mode and creates files on disk" $ withTempDir $ \tmpDir -> do
+      plan <- computeSyncPlan tmpDir testProject canonicalMatrix
+      res <- executeSyncPlan ApplySync plan
+      resultMode res `shouldBe` ApplySync
+      resultSuccess res `shouldBe` True
+      length (resultCreated res) `shouldSatisfy` (>= 20)
+      -- Assert disk files exist
+      doesFileExist (tmpDir </> ".hlint.yaml") `shouldReturn` True
+      doesFileExist (tmpDir </> ".gitmessage") `shouldReturn` True
+      -- Assert executable bit
+      let hookPath = tmpDir </> ".githooks" </> "commit-msg"
+      perms <- getPermissions hookPath
+      executable perms `shouldBe` True
+
+    it "satisfies the mathematical idempotency guarantee: f(f(x)) = f(x)" $ withTempDir $ \tmpDir -> do
+      -- 1. First synchronization pass: applies all creations
+      res1 <- syncRepository ApplySync tmpDir testProject canonicalMatrix
+      resultSuccess res1 `shouldBe` True
+      length (resultCreated res1) `shouldSatisfy` (>= 20)
+
+      -- 2. Second synchronization pass: must produce zero modifications
+      res2 <- syncRepository ApplySync tmpDir testProject canonicalMatrix
+      resultSuccess res2 `shouldBe` True
+      length (resultCreated res2) `shouldBe` 0
+      length (resultUpdated res2) `shouldBe` 0
+      length (resultChmodded res2) `shouldBe` 0
+      length (resultUnchanged res2) `shouldSatisfy` (>= 20)
+      length (resultErrors res2) `shouldBe` 0
+
+      -- 3. Verify that re-computing the plan yields isPlanClean == True
+      plan2 <- computeSyncPlan tmpDir testProject canonicalMatrix
+      isPlanClean plan2 `shouldBe` True
+
+    it "detects and repairs content drift and permission drift non-destructively" $ withTempDir $ \tmpDir -> do
+      -- 1. Initial synchronization
+      _ <- syncRepository ApplySync tmpDir testProject canonicalMatrix
+
+      -- 2. Mutate .hlint.yaml (content drift)
+      let hlintPath = tmpDir </> ".hlint.yaml"
+      TIO.writeFile hlintPath "# Corrupted or drifted HLint file\n"
+
+      -- 3. Strip executable bit from .githooks/commit-msg (permission drift)
+      let hookPath = tmpDir </> ".githooks" </> "commit-msg"
+      hookPerms <- getPermissions hookPath
+      setPermissions hookPath (setOwnerExecutable False hookPerms)
+
+      -- 4. Compute plan and verify drift detection
+      driftPlan <- computeSyncPlan tmpDir testProject canonicalMatrix
+      planUpdatedCount driftPlan `shouldBe` 1
+      planChmodCount driftPlan `shouldBe` 1
+      isPlanClean driftPlan `shouldBe` False
+
+      -- 5. Synchronize with ApplySync to repair drift
+      repairRes <- syncRepository ApplySync tmpDir testProject canonicalMatrix
+      resultSuccess repairRes `shouldBe` True
+      resultUpdated repairRes `shouldBe` [".hlint.yaml"]
+      resultChmodded repairRes `shouldBe` [".githooks/commit-msg"]
+
+      -- 6. Verify restored state is clean
+      postPlan <- computeSyncPlan tmpDir testProject canonicalMatrix
+      isPlanClean postPlan `shouldBe` True
+      permsAfter <- getPermissions hookPath
+      executable permsAfter `shouldBe` True
+
+    it "discovers sibling ecosystem repositories" $ withTempDir $ \tmpDir -> do
+      -- Create repository A (has .git)
+      let repoA = tmpDir </> "repo-alpha"
+      createDirectoryIfMissing True (repoA </> ".git")
+
+      -- Create repository B (has project.dhall)
+      let repoB = tmpDir </> "repo-beta"
+      createDirectoryIfMissing True repoB
+      TIO.writeFile (repoB </> "project.dhall") "-- test dhall"
+
+      -- Create non-repository directory
+      let plainDir = tmpDir </> "plain-notes"
+      createDirectoryIfMissing True plainDir
+
+      discovered <- discoverEcosystemRepositories tmpDir
+      length discovered `shouldBe` 2
+      map takeFileName discovered `shouldMatchList` ["repo-alpha", "repo-beta"]
+
+    it "renders formatted diagnostic sync plan and sync result tables" $ withTempDir $ \tmpDir -> do
+      plan <- computeSyncPlan tmpDir testProject canonicalMatrix
+      let planText = formatSyncPlan plan
+      planText `shouldSatisfy` (\t -> "Gachi Synchronization Plan" `T.isInfixOf` t)
+      planText `shouldSatisfy` (\t -> "Actions Planned:" `T.isInfixOf` t)
+
+      res <- executeSyncPlan DryRun plan
+      let resText = formatSyncResult res
+      resText `shouldSatisfy` (\t -> "Gachi Synchronization Execution Summary" `T.isInfixOf` t)
+      resText `shouldSatisfy` (\t -> "DRY RUN" `T.isInfixOf` t)

@@ -55,6 +55,7 @@ module Gachi.CLI
     -- * Re-exports
   , module Gachi.CLI.Init
   , module Gachi.CLI.Options
+  , module Gachi.CLI.Sync
   ) where
 
 import Data.Text (Text)
@@ -84,6 +85,7 @@ import Gachi.CLI.Options
   , retrofitOptionsParser
   , syncOptionsParser
   )
+import Gachi.CLI.Sync (runSync)
 
 --------------------------------------------------------------------------------
 -- 1. Metadata
@@ -114,7 +116,8 @@ defaultMain = do
 --
 -- * 'CmdInit': Dispatches directly to 'runInit', executing the complete project
 --   synthesis, filesystem materialization, and Git governance lifecycle.
--- * 'CmdSync': Emits roadmap schedule notice for Phase 3 harmonic synchronization.
+-- * 'CmdSync': Dispatches directly to 'runSync', harmonizing configuration and
+--   governance stanzas across single repositories or the entire ecosystem.
 -- * 'CmdRetrofit': Emits roadmap schedule notice for Phase 4 codebase retrofitting.
 -- * 'CmdPlan': Emits roadmap schedule notice for Phase 5 detached Git ledger governance.
 -- * 'CmdVersion': Outputs compiler pinning, Cabal target, and EUPL-1.2 licensing stanzas.
@@ -122,9 +125,7 @@ defaultMain = do
 -- Guarantees total evaluation with deterministic exit code propagation.
 runCommand :: Command -> IO ExitCode
 runCommand (CmdInit opts) = runInit opts
-runCommand (CmdSync _opts) = do
-  TIO.putStrLn "gachi sync: Cross-repository harmonic synchronization (Phase 3 - Scheduled)"
-  pure ExitSuccess
+runCommand (CmdSync opts) = runSync opts
 runCommand (CmdRetrofit _opts) = do
   TIO.putStrLn "gachi retrofit: Non-destructive codebase retrofitting (Phase 4 - Scheduled)"
   pure ExitSuccess

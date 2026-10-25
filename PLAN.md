@@ -63,9 +63,14 @@
   - Established `packages/gachi-sync` library implementing the 9-dimensional Standardization Matrix data models (`Gachi.Sync.Types`), canonical shared asset catalog (`Gachi.Sync.Catalog`), authoritative matrix registry (`Gachi.Sync.Matrix`), and read-only repository audit engine (`Gachi.Sync.Audit`).
   - Grounded `Note [Cross-Repository Standardization Matrix and Audit Semantics]` (`[ref:note-standardization-matrix]`) with 14 tags and 101 cross-references validated by Tagref.
   - Verified 21/21 passing Hspec tests validating canonical matrix completeness, category queries, path token substitution, audit compliance, content drift detection, missing file reporting, and ASCII diagnostic table formatting.
-- [ ] **Milestone 3.2:** Harmonic Chattering Synchronization (`gachi sync`)
-  - Differential inspection of shared infrastructure assets across `~/src/*` (`polytropos`, `gargamelle`, `sarutahiko`).
-  - Atomic, idempotent propagation of updated formatting rules, linter hints, git commit hooks, and agent guidance.
+- [x] **Milestone 3.2:** Harmonic Chattering Synchronization (`gachi sync`)
+  - Built pure, self-contained FIPS 180-2 SHA-256 differential cryptographic hashing engine (`Gachi.Sync.Hash`) with zero external crypto dependencies.
+  - Implemented harmonic chattering synchronization engine (`Gachi.Sync.Engine`) providing `SyncMode` (`DryRun`, `ApplySync`), atomic action planning (`ActionCreate`, `ActionUpdate`, `ActionChmod`, `ActionNoOp`), `SyncPlan`, `SyncResult`, `computeSyncPlan`, `executeSyncPlan`, `syncRepository`, `syncRepositoryQuick`, `discoverEcosystemRepositories`, and `syncEcosystem`.
+  - Enforced and mathematically verified the strict idempotency property: \(f(f(x)) = f(x)\), ensuring that applying synchronization a second time produces an empty modification set.
+  - Grounded CLI integration in `packages/gachi-cli` (`Gachi.CLI.Sync`) supporting `gachi sync [--target DIR] [--dry-run] [--all]`, with rich diagnostic ASCII summary tables.
+  - Grounded `Note [Harmonic Chattering Synchronization and Differential Propagation]` (`[ref:note-harmonic-sync]`).
+  - Verified 30/30 passing `gachi-sync` tests and 14/14 passing `gachi-cli` tests covering SHA-256 NIST vectors, plan evaluation, dry-run simulation, live repair, ecosystem discovery, and mathematical idempotency.
+  - Passed all 5 physical verification gates in `./bin/gachi-verify`: 0 HLint hints, all test suites passed, 15 tags and 110 references validated, 0 broken markdown links, and 50.0% production source comment density.
 - [ ] **Milestone 3.3:** Forge-Tiered CI Matrix Generation
   - Synthesis of tailored CI configs: heavyweight physical verification for GitHub Actions vs lightweight static gates for resource-constrained community forges (GitLab, Framagit, Disroot).
 

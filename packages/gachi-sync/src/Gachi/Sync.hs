@@ -82,9 +82,17 @@ module Gachi.Sync
 
     -- * Non-Destructive Audit Engine
   , module Gachi.Sync.Audit
+
+    -- * Harmonic Chattering Synchronization Engine
+  , module Gachi.Sync.Engine
+
+    -- * Differential Cryptographic Hashing
+  , module Gachi.Sync.Hash
   ) where
 
 import Gachi.Sync.Audit
 import Gachi.Sync.Catalog
+import Gachi.Sync.Engine
+import Gachi.Sync.Hash
 import Gachi.Sync.Matrix
 import Gachi.Sync.Types

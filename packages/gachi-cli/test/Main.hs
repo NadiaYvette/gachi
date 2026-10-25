@@ -30,7 +30,7 @@ import System.Directory
   , removeDirectoryRecursive
   )
 import System.Exit (ExitCode(..))
-import System.FilePath ((</>))
+import System.FilePath ((</>), takeFileName)
 import System.Process (readProcessWithExitCode)
 import Test.Hspec
 
@@ -101,6 +101,16 @@ main = hspec $ do
       case res of
         Success CmdVersion -> pure ()
         _ -> expectationFailure "Expected Success CmdVersion"
+
+    it "parses 'sync' subcommand with target, dry-run, and all flags" $ do
+      let res = execParserPure defaultPrefs (commandParser "0.1.0.0")
+                  ["sync", "-t", "/path/to/repo", "--dry-run", "-a"]
+      case res of
+        Success (CmdSync opts) -> do
+          syncTargetDir opts `shouldBe` Just "/path/to/repo"
+          syncDryRun opts `shouldBe` True
+          syncAll opts `shouldBe` True
+        _ -> expectationFailure "Expected Success (CmdSync opts)"
 
   describe "Gachi.CLI.Init (Project Resolution)" $ do
     it "resolves default project when no config is provided" $ do
@@ -234,3 +244,99 @@ main = hspec $ do
         -- Second run with FailOnExisting should fail gracefully
         exit2 <- runInit opts
         exit2 `shouldBe` ExitFailure 1
+
+  describe "Gachi.CLI.Sync (Harmonic Synchronization Command)" $ do
+    it "executes dry-run synchronization without modifying files" $ do
+      withTempDir "gachi-cli-sync-dry" $ \tmpDir -> do
+        let targetDir = tmpDir </> "sync-proj"
+            initOpts = InitOptions
+              { initProjectName = Just "sync-proj"
+              , initConfigFile = Nothing
+              , initTargetDir = Just targetDir
+              , initMode = FailOnExisting
+              , initAuthorName = Nothing
+              , initAuthorEmail = Nothing
+              , initDescription = Nothing
+              , initPackages = []
+              , initNoGit = True
+              , initDryRun = False
+              , initInteractive = False
+              }
+        initCode <- runInit initOpts
+        initCode `shouldBe` ExitSuccess
+
+        let syncOpts = SyncOptions
+              { syncTargetDir = Just targetDir
+              , syncDryRun = True
+              , syncAll = False
+              }
+        syncCode <- runSync syncOpts
+        syncCode `shouldBe` ExitSuccess
+
+    it "synchronizes and repairs configuration in an initialized workspace" $ do
+      withTempDir "gachi-cli-sync-apply" $ \tmpDir -> do
+        let targetDir = tmpDir </> "repair-proj"
+            initOpts = InitOptions
+              { initProjectName = Just "repair-proj"
+              , initConfigFile = Nothing
+              , initTargetDir = Just targetDir
+              , initMode = FailOnExisting
+              , initAuthorName = Nothing
+              , initAuthorEmail = Nothing
+              , initDescription = Nothing
+              , initPackages = []
+              , initNoGit = True
+              , initDryRun = False
+              , initInteractive = False
+              }
+        initCode <- runInit initOpts
+        initCode `shouldBe` ExitSuccess
+
+        -- Mutate .hlint.yaml to cause drift
+        let hlintPath = targetDir </> ".hlint.yaml"
+        TIO.writeFile hlintPath "# Drifted HLint configuration\n"
+
+        -- Apply synchronization to repair drift
+        let syncOpts = SyncOptions
+              { syncTargetDir = Just targetDir
+              , syncDryRun = False
+              , syncAll = False
+              }
+        syncCode1 <- runSync syncOpts
+        syncCode1 `shouldBe` ExitSuccess
+
+        -- Verify file content was repaired
+        repairedContent <- TIO.readFile hlintPath
+        repairedContent `shouldSatisfy` (\t -> "Ecosystem HLint Configuration" `T.isInfixOf` t)
+
+        -- Re-run sync to verify CLI idempotency
+        syncCode2 <- runSync syncOpts
+        syncCode2 `shouldBe` ExitSuccess
+
+    it "executes ecosystem-wide synchronization with --all" $ do
+      withTempDir "gachi-cli-sync-all" $ \tmpDir -> do
+        let repoA = tmpDir </> "repo-one"
+            repoB = tmpDir </> "repo-two"
+            makeOpts dir = InitOptions
+              { initProjectName = Just (T.pack (takeFileName dir))
+              , initConfigFile = Nothing
+              , initTargetDir = Just dir
+              , initMode = FailOnExisting
+              , initAuthorName = Nothing
+              , initAuthorEmail = Nothing
+              , initDescription = Nothing
+              , initPackages = []
+              , initNoGit = True
+              , initDryRun = False
+              , initInteractive = False
+              }
+        _ <- runInit (makeOpts repoA)
+        _ <- runInit (makeOpts repoB)
+
+        let allOpts = SyncOptions
+              { syncTargetDir = Just tmpDir
+              , syncDryRun = True
+              , syncAll = True
+              }
+        allCode <- runSync allOpts
+        allCode `shouldBe` ExitSuccess
