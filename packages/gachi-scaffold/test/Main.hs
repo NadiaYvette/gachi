@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -201,7 +202,7 @@ main = hspec $ do
         skippedFiles res `shouldBe` []
 
         -- Verify all files exist on disk
-        forM_ entries $ \e -> do
+        forM_ entries \e -> do
           let path = tmpDir </> entryPath e
           exists <- doesFileExist path
           exists `shouldBe` True

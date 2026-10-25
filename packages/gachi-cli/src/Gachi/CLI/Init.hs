@@ -1,5 +1,7 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -183,9 +185,8 @@ resolveProject opts = case initConfigFile opts of
     if not exists
       then pure (Left ("Dhall configuration file not found: " <> T.pack cfgPath))
       else do
-        dhallRes <- try (decodeProjectFile cfgPath) :: IO (Either SomeException Project)
-        case dhallRes of
-          Left err -> pure (Left ("Failed to decode Dhall specification: " <> T.pack (show err)))
+        try (decodeProjectFile cfgPath) >>= \case
+          Left (err :: SomeException) -> pure (Left ("Failed to decode Dhall specification: " <> T.show err))
           Right baseProj -> do
             let proj = applyCliOverrides opts baseProj
                 targetDir = case initTargetDir opts of
@@ -341,19 +342,19 @@ executeScaffolding proj targetDir opts
       TIO.putStrLn ("DRY RUN: Simulating workspace generation for '" <> projectName proj <> "'")
       TIO.putStrLn ("Target directory: " <> T.pack targetDir)
       TIO.putStrLn "Planned file materialization:"
-      forM_ entries $ \e -> do
+      forM_ entries \e -> do
         let execMark = if entryExecutable e then " [executable]" else ""
-            size = T.pack (show (T.length (entryContent e)))
+            size = T.show (T.length (entryContent e))
         TIO.putStrLn ("  - " <> T.pack (entryPath e) <> " (" <> size <> " chars)" <> execMark)
-      TIO.putStrLn ("Total: " <> T.pack (show (length entries)) <> " files planned.")
+      TIO.putStrLn ("Total: " <> T.show (length entries) <> " files planned.")
       TIO.putStrLn "--------------------------------------------------------------------------------"
       pure ExitSuccess
   | otherwise = do
       createDirectoryIfMissing True targetDir
       res <- generateAndWriteScaffold targetDir (initMode opts) proj
-      TIO.putStrLn ("[+] Successfully materialized " <> T.pack (show (length (writtenFiles res))) <> " files in " <> T.pack targetDir)
+      TIO.putStrLn ("[+] Successfully materialized " <> T.show (length (writtenFiles res)) <> " files in " <> T.pack targetDir)
       unless (null (skippedFiles res)) $ do
-        TIO.putStrLn ("[!] Skipped " <> T.pack (show (length (skippedFiles res))) <> " pre-existing files (mode: SkipExisting)")
+        TIO.putStrLn ("[!] Skipped " <> T.show (length (skippedFiles res)) <> " pre-existing files (mode: SkipExisting)")
 
       unlessNoGit (initNoGit opts) $ do
         initializeGitRepository targetDir

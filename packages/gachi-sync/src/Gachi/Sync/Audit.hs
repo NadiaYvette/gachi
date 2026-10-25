@@ -306,10 +306,10 @@ formatAuditReport report = T.unlines $
   , "================================================================================"
   , " Target Directory: " <> T.pack (reportTargetDir report)
   , " Project Name:     " <> reportProjectName report
-  , " Total Assets:     " <> T.pack (show (reportTotalAssets report))
-  , " Compliant:        " <> T.pack (show (reportCompliantCount report))
-  , " Drift Detected:   " <> T.pack (show (reportDriftCount report))
-  , " Missing Required: " <> T.pack (show (reportMissingCount report))
+  , " Total Assets:     " <> T.show (reportTotalAssets report)
+  , " Compliant:        " <> T.show (reportCompliantCount report)
+  , " Drift Detected:   " <> T.show (reportDriftCount report)
+  , " Missing Required: " <> T.show (reportMissingCount report)
   , " Compliance Rate:  " <> formatPct (reportCompliancePct report)
   , "--------------------------------------------------------------------------------"
   , " Status     | Dimension              | Path"
@@ -325,7 +325,7 @@ formatAuditReport report = T.unlines $
     formatPct val =
       let whole = floor val :: Int
           dec = floor (val * 10) `mod` 10 :: Int
-      in T.pack (show whole) <> "." <> T.pack (show dec) <> "%"
+      in T.show whole <> "." <> T.show dec <> "%"
 
     formatRow :: AssetAuditResult -> Text
     formatRow res =
@@ -360,11 +360,11 @@ formatAuditReport report = T.unlines $
       let p = T.pack (assetPath (resultAsset res))
       in case resultStatus res of
         StatusContentDrift actual expected ->
-          "  * " <> p <> ": content divergence (actual len: " <> T.pack (show actual)
-          <> " chars, expected: " <> T.pack (show expected) <> " chars)"
+          "  * " <> p <> ": content divergence (actual len: " <> T.show actual
+          <> " chars, expected: " <> T.show expected <> " chars)"
         StatusPermissionDrift actual expected ->
-          "  * " <> p <> ": permission mismatch (actual exec: " <> T.pack (show actual)
-          <> ", expected: " <> T.pack (show expected) <> ")"
+          "  * " <> p <> ": permission mismatch (actual exec: " <> T.show actual
+          <> ", expected: " <> T.show expected <> ")"
         StatusIOError err ->
           "  * " <> p <> ": I/O error (" <> err <> ")"
         _ -> "  * " <> p

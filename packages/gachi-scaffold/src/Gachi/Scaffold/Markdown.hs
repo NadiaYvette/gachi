@@ -284,7 +284,7 @@ renderBlock (BulletList items) =
   in T.unlines (map renderItem items)
 
 renderBlock (OrderedList items) =
-  let renderItem idx item = T.pack (show (idx :: Int)) <> ". " <> renderInline item
+  let renderItem idx item = T.show (idx :: Int) <> ". " <> renderInline item
   in T.unlines (zipWith renderItem [1 ..] items)
 
 renderBlock (Table headers rows) =

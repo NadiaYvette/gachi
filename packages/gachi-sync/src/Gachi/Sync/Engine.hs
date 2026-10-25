@@ -591,10 +591,10 @@ formatSyncPlan plan = T.unlines $
   , " Target Directory: " <> T.pack (planTargetDir plan)
   , " Project Name:     " <> planProjectName plan
   , " Actions Planned:  "
-      <> "Create: " <> T.pack (show (planCreatedCount plan))
-      <> " | Update: " <> T.pack (show (planUpdatedCount plan))
-      <> " | Chmod: " <> T.pack (show (planChmodCount plan))
-      <> " | No-Op: " <> T.pack (show (planNoOpCount plan))
+      <> "Create: " <> T.show (planCreatedCount plan)
+      <> " | Update: " <> T.show (planUpdatedCount plan)
+      <> " | Chmod: " <> T.show (planChmodCount plan)
+      <> " | No-Op: " <> T.show (planNoOpCount plan)
   , "--------------------------------------------------------------------------------"
   , " Action     | Path"
   , "------------+-------------------------------------------------------------------"
@@ -611,7 +611,7 @@ formatSyncPlan plan = T.unlines $
       in " UPDATE     | " <> T.pack p <> " (" <> oldHash <> " -> " <> newHash <> ")"
            <> (if isExec then " (+x)" else "")
     formatActionRow (ActionChmod p actual expected) =
-      " CHMOD      | " <> T.pack p <> " (exec: " <> T.pack (show actual) <> " -> " <> T.pack (show expected) <> ")"
+      " CHMOD      | " <> T.pack p <> " (exec: " <> T.show actual <> " -> " <> T.show expected <> ")"
     formatActionRow (ActionNoOp p) =
       " NO-OP      | " <> T.pack p <> " (compliant)"
     formatActionRow (ActionError p msg) =
@@ -634,10 +634,10 @@ formatSyncResult res = T.unlines $
   , " Project Name:     " <> resultProjectName res
   , " Execution Mode:   " <> (if resultMode res == DryRun then "DRY RUN (Preview Only)" else "APPLIED")
   , " Status:           " <> (if resultSuccess res then "SUCCESS" else "FAILED")
-  , " Files Created:    " <> T.pack (show (length (resultCreated res)))
-  , " Files Updated:    " <> T.pack (show (length (resultUpdated res)))
-  , " Permissions Fixed:" <> T.pack (show (length (resultChmodded res)))
-  , " Files Unchanged:  " <> T.pack (show (length (resultUnchanged res)))
+  , " Files Created:    " <> T.show (length (resultCreated res))
+  , " Files Updated:    " <> T.show (length (resultUpdated res))
+  , " Permissions Fixed:" <> T.show (length (resultChmodded res))
+  , " Files Unchanged:  " <> T.show (length (resultUnchanged res))
   ]
   ++ formatErrorSection (resultErrors res)
   ++

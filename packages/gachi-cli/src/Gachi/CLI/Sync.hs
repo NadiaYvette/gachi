@@ -1,4 +1,6 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -142,16 +144,13 @@ runSingleSync mode targetDir = do
       TIO.hPutStrLn stderr ("Target directory does not exist: " <> T.pack targetDir)
       pure (ExitFailure 1)
     else do
-      res <- syncRepositoryQuick mode targetDir
-      case res of
+      syncRepositoryQuick mode targetDir >>= \case
         Left err -> do
           TIO.hPutStrLn stderr ("Synchronization failed for " <> T.pack targetDir <> ": " <> err)
           pure (ExitFailure 1)
         Right result -> do
           TIO.putStrLn (formatSyncResult result)
-          if resultSuccess result
-            then pure ExitSuccess
-            else pure (ExitFailure 1)
+          pure if resultSuccess result then ExitSuccess else ExitFailure 1
 
 --------------------------------------------------------------------------------
 -- 3. Ecosystem-Wide Multi-Repository Orchestration
@@ -186,8 +185,8 @@ runEcosystemSync mode parentDir matrix = do
           TIO.putStrLn ("No repositories discovered under: " <> T.pack parentDir)
           pure ExitSuccess
         else do
-          TIO.putStrLn ("Discovered " <> T.pack (show (length repos)) <> " repositories under " <> T.pack parentDir <> ":")
-          forM_ repos $ \repo ->
+          TIO.putStrLn ("Discovered " <> T.show (length repos) <> " repositories under " <> T.pack parentDir <> ":")
+          forM_ repos \repo ->
             TIO.putStrLn ("  • " <> T.pack (takeFileName repo) <> " (" <> T.pack repo <> ")")
           TIO.putStrLn ""
 
@@ -196,9 +195,7 @@ runEcosystemSync mode parentDir matrix = do
           TIO.putStrLn summary
 
           let allSuccessful = all isResultSuccess results
-          if allSuccessful
-            then pure ExitSuccess
-            else pure (ExitFailure 1)
+          pure if allSuccessful then ExitSuccess else ExitFailure 1
   where
     isResultSuccess :: (FilePath, Either Text SyncResult) -> Bool
     isResultSuccess (_, Right res) = resultSuccess res
@@ -240,9 +237,9 @@ formatEcosystemSummary mode results =
       rows = map formatRow results
       totalRepos = length results
       successfulRepos = length (filter (\(_, r) -> case r of Right res -> resultSuccess res; Left _ -> False) results)
-      footer = "Total Repositories: " <> T.pack (show totalRepos)
-            <> " | Resonant: " <> T.pack (show successfulRepos)
-            <> " | Failed: " <> T.pack (show (totalRepos - successfulRepos))
+      footer = "Total Repositories: " <> T.show totalRepos
+            <> " | Resonant: " <> T.show successfulRepos
+            <> " | Failed: " <> T.show (totalRepos - successfulRepos)
   in T.unlines ([sep, hdr, sep] ++ rows ++ [sep, footer])
   where
     -- | Formats an individual repository's synchronization outcome into a padded table row.
@@ -265,11 +262,11 @@ formatEcosystemSummary mode results =
           <> " | " <> pad 11 "FAILED" <> " |"
         -- Branch B: Structured synchronization outcome with per-category counters
         Right res ->
-          let cStr = T.pack (show (length (resultCreated res)))
-              uStr = T.pack (show (length (resultUpdated res)))
-              mStr = T.pack (show (length (resultChmodded res)))
-              kStr = T.pack (show (length (resultUnchanged res)))
-              eStr = T.pack (show (length (resultErrors res)))
+          let cStr = T.show (length (resultCreated res))
+              uStr = T.show (length (resultUpdated res))
+              mStr = T.show (length (resultChmodded res))
+              kStr = T.show (length (resultUnchanged res))
+              eStr = T.show (length (resultErrors res))
               disp = if resultSuccess res then "RESONANT" else "DRIFTED"
           in "| " <> pad 20 repoSlug
              <> " | " <> pad 10 modeStr
