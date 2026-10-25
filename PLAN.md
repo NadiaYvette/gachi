@@ -59,8 +59,10 @@
 
 ## Phase 3: Chattering Configuration Propagation (`gachi sync`)
 
-- [ ] **Milestone 3.1:** Cross-Repository Standardization Matrix (`~/src/PLAN.md` §1.A)
-  - Standardization enforcement across directory layout, formatting profiles (Fourmolu/Ormolu/rustfmt), linter guardrails (`.hlint.yaml`), build conventions (`cabal.project` GHC 9.14 / Cabal 3.18), git hooks, and multi-mirror topologies.
+- [x] **Milestone 3.1:** Cross-Repository Standardization Matrix (`~/src/PLAN.md` §1.A)
+  - Established `packages/gachi-sync` library implementing the 9-dimensional Standardization Matrix data models (`Gachi.Sync.Types`), canonical shared asset catalog (`Gachi.Sync.Catalog`), authoritative matrix registry (`Gachi.Sync.Matrix`), and read-only repository audit engine (`Gachi.Sync.Audit`).
+  - Grounded `Note [Cross-Repository Standardization Matrix and Audit Semantics]` (`[ref:note-standardization-matrix]`) with 14 tags and 101 cross-references validated by Tagref.
+  - Verified 21/21 passing Hspec tests validating canonical matrix completeness, category queries, path token substitution, audit compliance, content drift detection, missing file reporting, and ASCII diagnostic table formatting.
 - [ ] **Milestone 3.2:** Harmonic Chattering Synchronization (`gachi sync`)
   - Differential inspection of shared infrastructure assets across `~/src/*` (`polytropos`, `gargamelle`, `sarutahiko`).
   - Atomic, idempotent propagation of updated formatting rules, linter hints, git commit hooks, and agent guidance.

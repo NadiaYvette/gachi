@@ -22,6 +22,7 @@ Welcome to the `gachi` technical documentation corpus.
 - [`packages/gachi-schema/`](../packages/gachi-schema/) — Declarative Dhall project schema definitions, encoders, decoders, and Polytropos open row isomorphisms.
 - [`packages/gachi-scaffold/`](../packages/gachi-scaffold/) — Multi-package workspace scaffolding engine, canonical file tree synthesis, and turnkey verification harnesses.
 - [`packages/gachi-cli/`](../packages/gachi-cli/) — Unified command-line interface, project initialization wizard (`gachi init`), and ecosystem automation tool.
+- [`packages/gachi-sync/`](../packages/gachi-sync/) — Cross-repository standardization matrix, canonical shared asset catalog, repository audit engine, and differential configuration propagation (`gachi sync`).
 
 ## Upstream & Ecosystem Planning
 - [`~/src/PLAN.md` §1](../../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi) — Parent ecosystem infrastructure mandate designating `gachi`.
