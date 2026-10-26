@@ -177,6 +177,8 @@ data SyncOptions = SyncOptions
     -- Displays unified diffs and file permission updates planned by the synchronization engine.
   , syncAll       :: !Bool
     -- ^ Discover and synchronize all sibling repositories across the ecosystem parent directory (@--all@ / @-a@).
+  , syncRemotes   :: !Bool
+    -- ^ Audit and synchronize git remote replication topology (@--remotes@ / @-r@).
   } deriving stock (Eq, Show)
 
 -- | Configuration parameters controlling Phase 4 'gachi retrofit'.
@@ -367,6 +369,11 @@ syncOptionsParser = SyncOptions
         ( long "all"
        <> short 'a'
        <> help "Discover and synchronize all repositories across the ecosystem parent directory"
+        )
+  <*> switch
+        ( long "remotes"
+       <> short 'r'
+       <> help "Audit and synchronize git remote replication topology"
         )
 
 -- | Applicative parser for 'RetrofitOptions'.

@@ -31,6 +31,14 @@ SPDX-License-Identifier: EUPL-1.2
 - **Non-Destructive Retrofitting:** Retrofitting operations (`gachi retrofit`) must non-destructively overlay ecosystem scaffolding without altering existing domain code.
 - **Plan Rollback Isolation:** The detached Git metadata store (`~/src/.plan.git`) and snapshot ledger (`~/src/plans/snapshots/`) must remain strictly isolated from child repository `.git/` directories.
 
+### 1.4 Multi-Remote Replication Topology & Provider Compliance
+In accordance with Note [Multi-Remote Replication Topology and Provider Compliance] [ref:note-remote-topology], all ecosystem repositories replicate across five canonical remotes:
+- **Sovereign Peer-to-Peer:** `rad` (`rad://<project-urn>`). Cryptographically verifiable DIDs without centralized server dependence.
+- **Commercial Mirrors:** `github` (`git@github.com:NadiaYvette/<project>.git`), `gitcode` (`git@gitcode.com:NadiaYvette/<project>.git`).
+- **Community Non-Profit Mirrors:** `framagit` (`git@framagit.org:NadiaYvette/<project>.git`), `disroot` (`git@git.disroot.org:NadiaYvette/<project>.git`).
+
+Non-compliant providers (such as SourceHut / `git.sr.ht` due to AI pair programming restrictions and email-only workflows) and plaintext HTTP URLs (`http://`) are strictly prohibited and automatically audited and reconciled via `gachi sync --remotes`.
+
 ---
 
 ## 2. Verification Gates & Quality Control

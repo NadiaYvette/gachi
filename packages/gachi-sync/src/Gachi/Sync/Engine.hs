@@ -119,20 +119,13 @@ import Gachi.Sync.Matrix (canonicalMatrix)
 import Gachi.Sync.Types
   ( StandardAsset(..)
   , StandardizationMatrix(..)
+  , SyncMode(..)
   , resolveAssetPath
   )
 
 --------------------------------------------------------------------------------
 -- 1. Synchronization Modes & Actions
 --------------------------------------------------------------------------------
-
--- | Operational mode controlling filesystem mutations during synchronization.
-data SyncMode
-  = DryRun
-    -- ^ Inspect discrepancies and compute the 'SyncPlan', but perform no disk mutations.
-  | ApplySync
-    -- ^ Apply all planned changes: create missing files, update content, and fix permissions.
-  deriving stock (Eq, Show, Ord, Enum, Bounded)
 
 -- | Explicit atomic action planned for an individual standardized asset.
 --

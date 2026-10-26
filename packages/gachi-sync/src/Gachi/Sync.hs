@@ -42,6 +42,13 @@
 --     generators synthesizing high-resource GitHub Actions workflows and lightweight
 --     community CI pipelines (GitLab, Woodpecker, Forgejo, Radicle).
 --
+-- 6.  __Multi-Remote Replication Topology & Provider Compliance ("Gachi.Sync.Remote"):__
+--     Formal models ('RemoteCategory', 'ProviderPolicy', 'ConfiguredRemote',
+--     'RemoteTopologyReport', 'RemoteSyncPlan') and operational executors
+--     enforcing the canonical 5-forge replication topology (Dimension 6: Radicle,
+--     GitHub, GitCode, Framagit, Disroot) while filtering and purging non-compliant
+--     hosting platforms (SourceHut, plaintext HTTP).
+--
 -- == Operational Invariants
 --
 -- All modules within @gachi-sync@ adhere to strict engineering guarantees:
@@ -96,6 +103,9 @@ module Gachi.Sync
 
     -- * Forge-Tiered CI Matrix Synthesis
   , module Gachi.Sync.CI
+
+    -- * Multi-Remote Replication Topology & Provider Compliance
+  , module Gachi.Sync.Remote
   ) where
 
 import Gachi.Sync.Audit
@@ -104,4 +114,5 @@ import Gachi.Sync.CI
 import Gachi.Sync.Engine
 import Gachi.Sync.Hash
 import Gachi.Sync.Matrix
+import Gachi.Sync.Remote
 import Gachi.Sync.Types

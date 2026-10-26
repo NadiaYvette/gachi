@@ -26,13 +26,18 @@ import System.Directory
   , setPermissions
   , setOwnerExecutable
   )
+import System.Exit (ExitCode(..))
 import System.FilePath ((</>), takeFileName)
+import System.Process (readProcessWithExitCode)
 import Test.Hspec
 
 import Gachi.Schema.Project
   ( Author(..)
   , Project
+  , RemoteSpec(..)
   , defaultProject
+  , remoteName
+  , remoteUrl
   )
 import Gachi.Scaffold
   ( ScaffoldMode(..)
@@ -54,6 +59,16 @@ withTempDir = bracket createTemp cleanupTemp
       createDirectoryIfMissing True dir
       pure dir
     cleanupTemp = removeDirectoryRecursive
+
+-- | Helper creating an isolated Git repository in a temporary directory for live remote testing.
+withGitTempDir :: (FilePath -> IO a) -> IO a
+withGitTempDir action = withTempDir $ \baseDir -> do
+  let repoDir = baseDir </> "git-remote-test"
+  createDirectoryIfMissing True repoDir
+  (code, _, err) <- readProcessWithExitCode "git" ["-C", repoDir, "init"] ""
+  if code == ExitSuccess
+    then action repoDir
+    else error ("Failed to initialize test git repo: " ++ err)
 
 main :: IO ()
 main = hspec $ do
@@ -440,3 +455,207 @@ main = hspec $ do
       let lightGH = forgeDefaultSpec ForgeGitHub TierLightweightStatic
       ciTier lightGH `shouldBe` TierLightweightStatic
       ciEnableTests lightGH `shouldBe` False
+
+  describe "Gachi.Sync.Remote (Multi-Remote Topology & Provider Compliance)" $ do
+    it "classifies approved and excluded hosting providers with detailed rationales" $ do
+      classifyProvider "git@github.com:NadiaYvette/gachi.git"
+        `shouldBe` ProviderAllowed "GitHub"
+      classifyProvider "https://github.com/NadiaYvette/gachi.git"
+        `shouldBe` ProviderAllowed "GitHub"
+      classifyProvider "git@gitcode.com:NadiaYvette/gachi.git"
+        `shouldBe` ProviderAllowed "GitCode"
+      classifyProvider "git@framagit.org:NadiaYvette/gachi.git"
+        `shouldBe` ProviderAllowed "Framagit (GitLab CE)"
+      classifyProvider "git@git.disroot.org:NadiaYvette/gachi.git"
+        `shouldBe` ProviderAllowed "Disroot (Forgejo)"
+      classifyProvider "rad://z4V1sNQGXxPZ5wUQkjSoaDguKA8mt"
+        `shouldBe` ProviderAllowed "Radicle P2P"
+
+      -- Verify SourceHut exclusion
+      case classifyProvider "git@git.sr.ht:~user/gachi" of
+        ProviderExcluded pName reason -> do
+          pName `shouldBe` "SourceHut (git.sr.ht)"
+          reason `shouldSatisfy` ("AI" `T.isInfixOf`)
+        _ -> expectationFailure "Expected SourceHut to be excluded"
+
+      -- Verify plaintext HTTP prohibition
+      case classifyProvider "http://github.com/NadiaYvette/gachi.git" of
+        ProviderExcluded pName reason -> do
+          pName `shouldBe` "Insecure Plaintext HTTP"
+          reason `shouldSatisfy` ("Plaintext" `T.isInfixOf`)
+        _ -> expectationFailure "Expected plaintext HTTP to be excluded"
+
+      -- Predicate checks
+      isProviderCompliant "git@github.com:NadiaYvette/gachi.git" `shouldBe` True
+      isProviderCompliant "rad://z4V1sNQGXxPZ5wUQkjSoaDguKA8mt" `shouldBe` True
+      isProviderCompliant "git@git.sr.ht:~user/gachi" `shouldBe` False
+      isProviderCompliant "http://github.com/NadiaYvette/gachi.git" `shouldBe` False
+
+    it "filters compliant and non-compliant remote specifications" $ do
+      let rCompliant = RemoteSpec "github" "git@github.com:NadiaYvette/gachi.git"
+          rRadicle   = RemoteSpec "rad" "rad://gachi"
+          rExcluded  = RemoteSpec "srht" "git@git.sr.ht:~user/gachi"
+          allSpecs   = [rCompliant, rRadicle, rExcluded]
+
+      filterCompliantRemotes allSpecs `shouldBe` [rCompliant, rRadicle]
+      let nonComp = filterNonCompliantRemotes allSpecs
+      length nonComp `shouldBe` 1
+      case nonComp of
+        ((r, _):_) -> remoteName r `shouldBe` "srht"
+        []         -> expectationFailure "Expected non-compliant remote"
+
+    it "normalizes URLs and evaluates semantic equivalence" $ do
+      normalizeRemoteUrl "git@github.com:NadiaYvette/gachi.git"
+        `shouldBe` "git@github.com:nadiayvette/gachi"
+      normalizeRemoteUrl "https://github.com/NadiaYvette/gachi/"
+        `shouldBe` "https://github.com/nadiayvette/gachi"
+
+      urlsMatch "git@github.com:NadiaYvette/gachi.git" "https://github.com/NadiaYvette/gachi"
+        `shouldBe` True
+      urlsMatch "git@github.com:NadiaYvette/gachi.git" "git@gitcode.com:NadiaYvette/gachi.git"
+        `shouldBe` False
+
+    it "synthesizes canonical 5-forge replication specs" $ do
+      canonicalRemoteNames `shouldBe` ["rad", "github", "gitcode", "framagit", "disroot"]
+      all isCanonicalRemoteName canonicalRemoteNames `shouldBe` True
+      isCanonicalRemoteName "origin" `shouldBe` False
+      isCanonicalRemoteName "upstream" `shouldBe` False
+
+      let specs = defaultRemoteSpecsFor "gachi"
+      length specs `shouldBe` 5
+      map remoteName specs `shouldBe` ["rad", "github", "gitcode", "framagit", "disroot"]
+      map remoteUrl specs `shouldBe`
+        [ "rad://gachi"
+        , "git@github.com:NadiaYvette/gachi.git"
+        , "git@gitcode.com:NadiaYvette/gachi.git"
+        , "git@framagit.org:NadiaYvette/gachi.git"
+        , "git@git.disroot.org:NadiaYvette/gachi.git"
+        ]
+
+    it "parses git remote -v porcelain output into ConfiguredRemote records" $ do
+      let rawOutput = T.unlines
+            [ "github\tgit@github.com:NadiaYvette/gachi.git (fetch)"
+            , "github\tgit@github.com:NadiaYvette/gachi.git (push)"
+            , "rad\trad://gachi (fetch)"
+            , "rad\trad://gachi (push)"
+            , "all\tgit@github.com:NadiaYvette/gachi.git (push)"
+            , "all\tgit@gitcode.com:NadiaYvette/gachi.git (push)"
+            ]
+          configured = parseGitRemoteOutput rawOutput
+      length configured `shouldBe` 3
+      let mGithub = lookup "github" [(crName r, r) | r <- configured]
+      case mGithub of
+        Just gh -> do
+          crFetchUrl gh `shouldBe` Just "git@github.com:NadiaYvette/gachi.git"
+          crPushUrls gh `shouldBe` ["git@github.com:NadiaYvette/gachi.git"]
+        Nothing -> expectationFailure "Expected 'github' remote parsed"
+
+      let mAll = lookup "all" [(crName r, r) | r <- configured]
+      case mAll of
+        Just allR -> do
+          crFetchUrl allR `shouldBe` Nothing
+          length (crPushUrls allR) `shouldBe` 2
+        Nothing -> expectationFailure "Expected 'all' remote parsed"
+
+    it "evaluates topology reports detecting clean alignment, missing remotes, drift, and prohibited providers" $ do
+      let specs = defaultRemoteSpecsFor "gachi"
+
+      -- 1. Empty configuration -> 5 missing remotes
+      let reportEmpty = evaluateRemoteTopology "gachi" specs []
+      reportCompliant reportEmpty `shouldBe` False
+      remoteMissingCount reportEmpty `shouldBe` 5
+      remoteDriftCount reportEmpty `shouldBe` 0
+      remoteNonCompliantCount reportEmpty `shouldBe` 0
+
+      -- 2. Fully aligned configuration -> compliant
+      let alignedConfig =
+            [ ConfiguredRemote "rad" (Just "rad://gachi") ["rad://gachi"]
+            , ConfiguredRemote "github" (Just "git@github.com:NadiaYvette/gachi.git") ["git@github.com:NadiaYvette/gachi.git"]
+            , ConfiguredRemote "gitcode" (Just "git@gitcode.com:NadiaYvette/gachi.git") ["git@gitcode.com:NadiaYvette/gachi.git"]
+            , ConfiguredRemote "framagit" (Just "git@framagit.org:NadiaYvette/gachi.git") ["git@framagit.org:NadiaYvette/gachi.git"]
+            , ConfiguredRemote "disroot" (Just "git@git.disroot.org:NadiaYvette/gachi.git") ["git@git.disroot.org:NadiaYvette/gachi.git"]
+            ]
+          reportAligned = evaluateRemoteTopology "gachi" specs alignedConfig
+      reportCompliant reportAligned `shouldBe` True
+      remoteMissingCount reportAligned `shouldBe` 0
+
+      -- 3. Drifted URL
+      let driftedConfig =
+            [ ConfiguredRemote "rad" (Just "rad://gachi") ["rad://gachi"]
+            , ConfiguredRemote "github" (Just "git@github.com:OtherOrg/gachi.git") ["git@github.com:OtherOrg/gachi.git"]
+            , ConfiguredRemote "gitcode" (Just "git@gitcode.com:NadiaYvette/gachi.git") ["git@gitcode.com:NadiaYvette/gachi.git"]
+            , ConfiguredRemote "framagit" (Just "git@framagit.org:NadiaYvette/gachi.git") ["git@framagit.org:NadiaYvette/gachi.git"]
+            , ConfiguredRemote "disroot" (Just "git@git.disroot.org:NadiaYvette/gachi.git") ["git@git.disroot.org:NadiaYvette/gachi.git"]
+            ]
+          reportDrift = evaluateRemoteTopology "gachi" specs driftedConfig
+      reportCompliant reportDrift `shouldBe` False
+      remoteDriftCount reportDrift `shouldBe` 1
+
+      -- 4. Prohibited provider
+      let prohibitedConfig =
+            alignedConfig ++ [ConfiguredRemote "srht" (Just "git@git.sr.ht:~user/gachi") []]
+          reportProhibited = evaluateRemoteTopology "gachi" specs prohibitedConfig
+      reportCompliant reportProhibited `shouldBe` False
+      remoteNonCompliantCount reportProhibited `shouldBe` 1
+
+    it "computes deterministic RemoteSyncPlan and formats ASCII report tables" $ do
+      let specs = defaultRemoteSpecsFor "gachi"
+          mixedConfig =
+            [ ConfiguredRemote "github" (Just "git@github.com:OtherOrg/gachi.git") []
+            , ConfiguredRemote "srht" (Just "git@git.sr.ht:~user/gachi") []
+            ]
+          report = evaluateRemoteTopology "gachi" specs mixedConfig
+          plan = computeRemoteSyncPlan report
+
+      planAddCount plan `shouldBe` 4    -- rad, gitcode, framagit, disroot
+      planUpdateCount plan `shouldBe` 1 -- github drift
+      planRemoveCount plan `shouldBe` 1 -- srht prohibited
+
+      let reportTable = formatRemoteReport report
+      reportTable `shouldSatisfy` ("Gachi Multi-Remote Topology Audit" `T.isInfixOf`)
+      reportTable `shouldSatisfy` ("ref:note-remote-topology" `T.isInfixOf`)
+
+      let planTable = formatRemoteSyncPlan plan
+      planTable `shouldSatisfy` ("[ADD REMOTE]" `T.isInfixOf`)
+      planTable `shouldSatisfy` ("[UPDATE URL]" `T.isInfixOf`)
+      planTable `shouldSatisfy` ("[REMOVE REMOTE]" `T.isInfixOf`)
+
+    it "audits and executes synchronization in a live Git repository" $ do
+      withGitTempDir $ \repoDir -> do
+        let pName = T.pack (takeFileName repoDir)
+            proj = defaultProject pName (Author "Nadia" "nadia@example.com")
+
+        -- Initial audit on fresh repo has 5 missing remotes
+        initialReport <- auditRemoteTopology repoDir proj
+        remoteMissingCount initialReport `shouldBe` 5
+
+        -- Dry run produces planned logs without altering git config
+        let initialPlan = computeRemoteSyncPlan initialReport
+        dryRes <- executeRemoteSyncPlan DryRun initialPlan
+        case dryRes of
+          Left err -> expectationFailure (T.unpack err)
+          Right logs -> length logs `shouldBe` 5
+
+        postDryRemotes <- queryGitRemotes repoDir
+        postDryRemotes `shouldBe` Right []
+
+        -- Apply synchronization to add all canonical remotes
+        applyRes <- executeRemoteSyncPlan ApplySync initialPlan
+        case applyRes of
+          Left err -> expectationFailure (T.unpack err)
+          Right logs -> length logs `shouldBe` 5
+
+        -- Verify all remotes configured in Git
+        configured <- queryGitRemotes repoDir
+        case configured of
+          Left err -> expectationFailure (T.unpack err)
+          Right rms -> do
+            length rms `shouldBe` 5
+            map crName rms `shouldMatchList` ["rad", "github", "gitcode", "framagit", "disroot"]
+
+        -- Secondary audit confirms full compliance
+        finalReport <- auditRemoteTopology repoDir proj
+        reportCompliant finalReport `shouldBe` True
+        remoteMissingCount finalReport `shouldBe` 0
+        remoteDriftCount finalReport `shouldBe` 0
+        remoteNonCompliantCount finalReport `shouldBe` 0

@@ -79,6 +79,13 @@
   - Integrated CI generators into `Gachi.Sync.Catalog` (`githubCiTemplate`, `gitlabCiTemplate`, `woodpeckerCiTemplate`) and `Gachi.Sync.Matrix` (`ciWorkflowAssets`).
   - Canonically grounded `Note [Forge-Tiered CI Resource Allocation and Static Gate Partitioning]` (`[ref:note-forge-tiered-ci]`) with 16 tags and 128 references validated across 82 files.
   - Verified 39/39 passing Hspec tests in `packages/gachi-sync/test/Main.hs` (97/97 total tests across all 5 packages) and passed all 5 physical verification gates in `./bin/gachi-verify` with 50.7% production comment density.
+- [x] **Milestone 3.4:** Multi-Remote Topology Management
+  - Grounded canonical 5-mirror remote topology across all ecosystem checkouts in `packages/gachi-sync/src/Gachi/Sync/Remote.hs`: sovereign peer-to-peer storage `rad` (`rad://...`), commercial cloud mirrors `github` (`git@github.com:...`) and `gitcode` (`git@gitcode.com:...`), community mirrors `framagit` (`git@framagit.org:...`) and `disroot` (`git@git.disroot.org:...`), and aggregate multi-push remote `all`.
+  - Implemented provider compliance auditing (`isProviderCompliant`, `classifyProvider`) enforcing exclusion of non-compliant forges (e.g., SourceHut / `git.sr.ht` due to AI pair programming tool prohibitions and email-only workflows) and insecure plaintext transports.
+  - Implemented pure topology analysis combinators (`evaluateRemoteTopology`, `computeRemoteSyncPlan`, `normalizeRemoteUrl`, `urlsMatch`) and live Git remote mutation routines (`queryGitRemotes`, `executeRemoteSyncPlan`, `syncRemoteTopology`, `syncRemoteTopologyQuick`).
+  - Extended CLI options in `packages/gachi-cli` with `--remotes` / `-r` flag for `gachi sync` to audit and reconcile remote configurations in standalone or batch modes.
+  - Canonically grounded `Note [Multi-Remote Replication Topology and Provider Compliance]` (`[ref:note-remote-topology]`).
+  - Verified 47/47 passing tests in `packages/gachi-sync/test/Main.hs` and 16/16 in `packages/gachi-cli/test/Main.hs` (107/107 total tests across all workspace packages) and passed all 5 physical verification gates in `./bin/gachi-verify` with 50.1% production comment density.
 
 ---
 

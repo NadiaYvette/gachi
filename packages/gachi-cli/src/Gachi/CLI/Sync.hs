@@ -57,12 +57,14 @@ module Gachi.CLI.Sync
     -- * Operational Execution Routines
   , runSingleSync
   , runEcosystemSync
+  , runRemoteSync
+  , runEcosystemRemoteSync
 
     -- * Summary Formatting
   , formatEcosystemSummary
   ) where
 
-import Control.Monad (forM_)
+import Control.Monad (forM, forM_, unless, when)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -78,9 +80,14 @@ import Gachi.Sync
   , SyncMode(..)
   , SyncResult(..)
   , canonicalMatrix
+  , computeRemoteSyncPlan
   , discoverEcosystemRepositories
+  , formatRemoteReport
+  , formatRemoteSyncPlan
   , formatSyncResult
+  , planRemoteActions
   , syncEcosystem
+  , syncRemoteTopologyQuick
   , syncRepositoryQuick
   )
 
@@ -100,10 +107,13 @@ import Gachi.Sync
 --      executable bit permissions.
 --
 -- 2. __Scope Resolution:__
+--    * __Remote Topology Synchronization (@--remotes@ / @-r@):__
+--      Delegates to 'runRemoteSync' (or 'runEcosystemRemoteSync' when @--all@ is active),
+--      auditing configured Git remotes against Note [Multi-Remote Replication Topology and Provider Compliance]
+--      [ref:note-remote-topology] and reconciling missing or drifted remotes.
 --    * __Ecosystem Scope (@--all@ / @-a@):__
 --      Delegates to 'runEcosystemSync', discovering all sibling repositories in the
---      target directory (or current working directory if @--target@ is omitted) and
---      harmonizing each discovered checkout in sequence.
+--      target directory and harmonizing each discovered checkout in sequence.
 --    * __Targeted Repository Scope (Default):__
 --      Delegates to 'runSingleSync', synchronizing only the specified directory.
 --
@@ -115,9 +125,13 @@ runSync :: SyncOptions -> IO ExitCode
 runSync opts = do
   let mode = if syncDryRun opts then DryRun else ApplySync
       target = fromMaybe "." (syncTargetDir opts)
-  if syncAll opts
-    then runEcosystemSync mode target canonicalMatrix
-    else runSingleSync mode target
+  if syncRemotes opts
+    then if syncAll opts
+      then runEcosystemRemoteSync mode target
+      else runRemoteSync mode target
+    else if syncAll opts
+      then runEcosystemSync mode target canonicalMatrix
+      else runSingleSync mode target
 
 --------------------------------------------------------------------------------
 -- 2. Single Repository Synchronization
@@ -276,3 +290,84 @@ formatEcosystemSummary mode results =
              <> " | " <> pad 9 kStr
              <> " | " <> pad 6 eStr
              <> " | " <> pad 11 disp <> " |"
+
+--------------------------------------------------------------------------------
+-- 5. Multi-Remote Replication Topology Synchronization
+--------------------------------------------------------------------------------
+
+-- | Synchronizes or audits the Git remote replication topology for a repository checkout.
+--
+-- Evaluates the target checkout against Note [Multi-Remote Replication Topology and Provider Compliance]
+-- [ref:note-remote-topology], identifying missing canonical remotes (@rad@, @github@,
+-- @gitcode@, @framagit@, @disroot@), URL drift, and prohibited hosting providers
+-- (such as SourceHut or plaintext HTTP).
+--
+-- === Phased Remote Reconciliation Sequence
+--
+-- 1.  __Checkout Validation:__
+--     Verifies that the target checkout directory exists prior to initiating Git queries.
+-- 2.  __Porcelain Topology Audit:__
+--     Invokes 'syncRemoteTopologyQuick' to inspect @git remote -v@ metadata and compare
+--     active mirrors against canonical expectations.
+-- 3.  __Diagnostic Report Emission:__
+--     Outputs the formatted tabular report ('formatRemoteReport') highlighting missing,
+--     drifted, and prohibited endpoints.
+-- 4.  __Plan Display & Execution:__
+--     When actions are planned, outputs the action table ('formatRemoteSyncPlan').
+--     Under 'ApplySync' mode, applies the Git commands and prints confirmation logs.
+-- 5.  __Exit Disposition:__
+--     Yields 'ExitSuccess' if all actions succeeded or preview completed cleanly.
+runRemoteSync :: SyncMode -> FilePath -> IO ExitCode
+runRemoteSync mode targetDir = do
+  exists <- doesDirectoryExist targetDir
+  if not exists
+    then do
+      TIO.hPutStrLn stderr ("Target directory does not exist: " <> T.pack targetDir)
+      pure (ExitFailure 1)
+    else do
+      (report, execRes) <- syncRemoteTopologyQuick mode targetDir
+      TIO.putStrLn (formatRemoteReport report)
+      let plan = computeRemoteSyncPlan report
+      unless (null (planRemoteActions plan)) $
+        TIO.putStrLn (formatRemoteSyncPlan plan)
+      case execRes of
+        Left err -> do
+          TIO.hPutStrLn stderr ("Remote synchronization failed: " <> err)
+          pure (ExitFailure 1)
+        Right logs -> do
+          when (mode == ApplySync) $
+            mapM_ TIO.putStrLn logs
+          pure ExitSuccess
+
+-- | Discovers and synchronizes remote topology across all repositories in a parent folder.
+--
+-- Evaluates each discovered checkout under 'runRemoteSync', outputting individual
+-- audit tables and terminating with 'ExitSuccess' only if all checkouts succeed.
+--
+-- === Multi-Repository Traversal Semantics
+--
+-- 1. Locates candidate repositories via 'discoverEcosystemRepositories'.
+-- 2. Iterates deterministically through discovered folders in alphabetical order.
+-- 3. Audits and repairs the 5-forge replication topology within each checkout.
+-- 4. Yields 'ExitFailure 1' if any discovered repository encounters Git configuration errors.
+runEcosystemRemoteSync :: SyncMode -> FilePath -> IO ExitCode
+runEcosystemRemoteSync mode parentDir = do
+  exists <- doesDirectoryExist parentDir
+  if not exists
+    then do
+      TIO.hPutStrLn stderr ("Ecosystem directory does not exist: " <> T.pack parentDir)
+      pure (ExitFailure 1)
+    else do
+      repos <- discoverEcosystemRepositories parentDir
+      if null repos
+        then do
+          TIO.putStrLn ("No repositories discovered under: " <> T.pack parentDir)
+          pure ExitSuccess
+        else do
+          TIO.putStrLn ("Auditing remote topology across " <> T.show (length repos) <> " repositories under " <> T.pack parentDir <> ":\n")
+          codes <- forM repos $ \repo -> do
+            TIO.putStrLn ("--- " <> T.pack (takeFileName repo) <> " (" <> T.pack repo <> ") ---")
+            code <- runRemoteSync mode repo
+            TIO.putStrLn ""
+            pure code
+          pure if all (== ExitSuccess) codes then ExitSuccess else ExitFailure 1

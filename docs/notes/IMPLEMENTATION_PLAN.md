@@ -216,12 +216,19 @@ gachi/
 - **Invariants:**
   - Note [Forge-Tiered CI Resource Allocation and Static Gate Partitioning] `[ref:note-forge-tiered-ci]`: Prevents resource exhaustion and OOM kernel kills on self-hosted community runners while maintaining strict upstream verification gates.
 
-#### Milestone 3.4: Multi-Remote Topology Management
+#### Milestone 3.4: Multi-Remote Topology Management `[COMPLETED]`
 - **Deliverables:**
-  - Automatic auditing and configuration of standard multi-mirror remotes:
-    - `rad` (Radicle peer-to-peer identity).
-    - `github`, `gitcode`, `framagit`, `disroot`.
-  - Exclusion filter for non-compliant hosting providers (e.g. SourceHut).
+  - Automatic auditing, policy classification, and reconciliation of the canonical 5-remote topology:
+    - `rad` (Radicle sovereign peer-to-peer identity: `rad://<project-urn>`).
+    - `github`, `gitcode` (Global commercial mirrors).
+    - `framagit`, `disroot` (Community non-profit GitLab CE / Forgejo mirrors).
+    - `all` (Aggregate multi-target push remote).
+  - Dedicated module `Gachi.Sync.Remote` in `packages/gachi-sync`.
+  - Exclusion filter for non-compliant hosting providers (`ProviderExcluded` for SourceHut / `git.sr.ht` and plaintext HTTP).
+  - CLI integration via `gachi sync --remotes` (`-r`) in `packages/gachi-cli`.
+  - Comprehensive Hspec test suite validating parsing, classification, evaluation, plan generation, and live Git operations.
+- **Invariants:**
+  - Note [Multi-Remote Replication Topology and Provider Compliance] `[ref:note-remote-topology]`: Prohibits platform lock-in, enforces sovereign P2P distribution, and purges non-compliant providers.
 
 #### Milestone 3.5: Cellular Sheaf Coherence Auditor (`gachi doctor --sheaf`)
 - **Deliverables:**

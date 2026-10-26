@@ -110,6 +110,16 @@ main = hspec $ do
           syncTargetDir opts `shouldBe` Just "/path/to/repo"
           syncDryRun opts `shouldBe` True
           syncAll opts `shouldBe` True
+          syncRemotes opts `shouldBe` False
+        _ -> expectationFailure "Expected Success (CmdSync opts)"
+
+    it "parses 'sync' subcommand with --remotes / -r flag" $ do
+      let res = execParserPure defaultPrefs (commandParser "0.1.0.0")
+                  ["sync", "-t", "/path/to/repo", "-r"]
+      case res of
+        Success (CmdSync opts) -> do
+          syncTargetDir opts `shouldBe` Just "/path/to/repo"
+          syncRemotes opts `shouldBe` True
         _ -> expectationFailure "Expected Success (CmdSync opts)"
 
   describe "Gachi.CLI.Init (Project Resolution)" $ do
@@ -269,6 +279,7 @@ main = hspec $ do
               { syncTargetDir = Just targetDir
               , syncDryRun = True
               , syncAll = False
+              , syncRemotes = False
               }
         syncCode <- runSync syncOpts
         syncCode `shouldBe` ExitSuccess
@@ -301,6 +312,7 @@ main = hspec $ do
               { syncTargetDir = Just targetDir
               , syncDryRun = False
               , syncAll = False
+              , syncRemotes = False
               }
         syncCode1 <- runSync syncOpts
         syncCode1 `shouldBe` ExitSuccess
@@ -337,6 +349,44 @@ main = hspec $ do
               { syncTargetDir = Just tmpDir
               , syncDryRun = True
               , syncAll = True
+              , syncRemotes = False
               }
         allCode <- runSync allOpts
         allCode `shouldBe` ExitSuccess
+
+    it "executes remote topology audit and synchronization with --remotes" $ do
+      withTempDir "gachi-cli-sync-remotes" $ \tmpDir -> do
+        let targetDir = tmpDir </> "remote-proj"
+            initOpts = InitOptions
+              { initProjectName = Just "remote-proj"
+              , initConfigFile = Nothing
+              , initTargetDir = Just targetDir
+              , initMode = FailOnExisting
+              , initAuthorName = Nothing
+              , initAuthorEmail = Nothing
+              , initDescription = Nothing
+              , initPackages = []
+              , initNoGit = False
+              , initDryRun = False
+              , initInteractive = False
+              }
+        initCode <- runInit initOpts
+        initCode `shouldBe` ExitSuccess
+
+        -- Audit & sync remotes via CLI
+        let syncOpts = SyncOptions
+              { syncTargetDir = Just targetDir
+              , syncDryRun = False
+              , syncAll = False
+              , syncRemotes = True
+              }
+        syncCode <- runSync syncOpts
+        syncCode `shouldBe` ExitSuccess
+
+        -- Verify git remote output contains canonical remotes
+        (cGit, remotesOut, _) <- readProcessWithExitCode "git" ["-C", targetDir, "remote"] ""
+        cGit `shouldBe` ExitSuccess
+        let rList = words remotesOut
+        rList `shouldContain` ["github"]
+        rList `shouldContain` ["framagit"]
+        rList `shouldContain` ["disroot"]

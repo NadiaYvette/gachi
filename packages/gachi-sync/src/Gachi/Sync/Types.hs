@@ -116,6 +116,9 @@ module Gachi.Sync.Types
 
     -- * Diagnostic Reporting
   , AuditReport(..)
+
+    -- * Operational Synchronization Modes
+  , SyncMode(..)
   ) where
 
 import Data.Text (Text)
@@ -410,3 +413,18 @@ data AuditReport = AuditReport
   , reportCompliancePct  :: !Double
     -- ^ Overall compliance percentage (0.0% to 100.0%).
   } deriving stock (Eq, Show, Generic)
+
+--------------------------------------------------------------------------------
+-- 5. Operational Synchronization Modes
+--------------------------------------------------------------------------------
+
+-- | Operational mode controlling filesystem mutations during synchronization.
+--
+-- Governs whether synchronization plans are simulated as read-only dry runs or
+-- executed as atomic mutations on disk.
+data SyncMode
+  = DryRun
+    -- ^ Inspect discrepancies and compute the 'SyncPlan', but perform no disk mutations.
+  | ApplySync
+    -- ^ Apply all planned changes: create missing files, update content, and fix permissions.
+  deriving stock (Eq, Show, Ord, Enum, Bounded, Generic)
