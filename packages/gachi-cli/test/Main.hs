@@ -139,6 +139,24 @@ main = hspec $ do
           doctorAll opts `shouldBe` True
         _ -> expectationFailure "Expected Success (CmdDoctor opts) with flags"
 
+    it "parses 'retrofit' subcommand with target, dry-run, and markdown flags" $ do
+      let res1 = execParserPure defaultPrefs (commandParser "0.1.0.0") ["retrofit"]
+      case res1 of
+        Success (CmdRetrofit opts) -> do
+          retrofitTargetDir opts `shouldBe` Nothing
+          retrofitDryRun opts `shouldBe` False
+          retrofitMarkdown opts `shouldBe` False
+        _ -> expectationFailure "Expected Success (CmdRetrofit opts) for default retrofit"
+
+      let res2 = execParserPure defaultPrefs (commandParser "0.1.0.0")
+                   ["retrofit", "-t", "/path/to/legacy", "--dry-run", "-m"]
+      case res2 of
+        Success (CmdRetrofit opts) -> do
+          retrofitTargetDir opts `shouldBe` Just "/path/to/legacy"
+          retrofitDryRun opts `shouldBe` True
+          retrofitMarkdown opts `shouldBe` True
+        _ -> expectationFailure "Expected Success (CmdRetrofit opts) with flags"
+
   describe "Gachi.CLI.Init (Project Resolution)" $ do
     it "resolves default project when no config is provided" $ do
       let opts = InitOptions
@@ -464,3 +482,47 @@ main = hspec $ do
         -- Post-sync doctor confirms harmonic equilibrium (10/10 contracts coherent)
         postSyncExit <- runDoctor docOpts
         postSyncExit `shouldBe` ExitSuccess
+
+  describe "Gachi.CLI.Retrofit (Diagnostic Inspection Execution)" $ do
+    it "fails gracefully with ExitFailure 1 when target directory does not exist" $ do
+      let opts = RetrofitOptions
+            { retrofitTargetDir = Just "/nonexistent/directory/path/xyz"
+            , retrofitDryRun    = True
+            , retrofitMarkdown  = False
+            }
+      exitCode <- runRetrofit opts
+      exitCode `shouldBe` ExitFailure 1
+
+    it "runs diagnostic inspection on an initialized workspace successfully" $ withTempDir "gachi-cli-retrofit" $ \baseDir -> do
+      let targetDir = baseDir </> "retrofit-proj"
+          initOpts = InitOptions
+            { initProjectName = Just "retrofit-proj"
+            , initConfigFile  = Nothing
+            , initTargetDir   = Just targetDir
+            , initMode        = FailOnExisting
+            , initAuthorName  = Just "Nadia Yvette Chambers"
+            , initAuthorEmail = Just "nadia.yvette.chambers@ik.me"
+            , initDescription = Just "Retrofit Target Testing"
+            , initPackages    = ["core"]
+            , initNoGit       = False
+            , initDryRun      = False
+            , initInteractive = False
+            }
+      initCode <- runInit initOpts
+      initCode `shouldBe` ExitSuccess
+
+      let retroOpts = RetrofitOptions
+            { retrofitTargetDir = Just targetDir
+            , retrofitDryRun    = True
+            , retrofitMarkdown  = False
+            }
+      retroCode <- runRetrofit retroOpts
+      retroCode `shouldBe` ExitSuccess
+
+      let mdOpts = RetrofitOptions
+            { retrofitTargetDir = Just targetDir
+            , retrofitDryRun    = False
+            , retrofitMarkdown  = True
+            }
+      mdCode <- runRetrofit mdOpts
+      mdCode `shouldBe` ExitSuccess

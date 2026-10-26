@@ -19,6 +19,7 @@ library
     Gachi.CLI.Doctor
     Gachi.CLI.Init
     Gachi.CLI.Options
+    Gachi.CLI.Retrofit
     Gachi.CLI.Sync
   hs-source-dirs: src
   default-language: Haskell2010
@@ -39,7 +40,8 @@ library
     gachi-core >= 0.1,
     gachi-schema >= 0.1,
     gachi-scaffold >= 0.1,
-    gachi-sync >= 0.1
+    gachi-sync >= 0.1,
+    gachi-retrofit >= 0.1
 
 executable gachi
   main-is: Main.hs
@@ -77,6 +79,7 @@ test-suite tests
     gachi-schema,
     gachi-scaffold,
     gachi-sync,
+    gachi-retrofit,
     text >= 2.0,
     directory >= 1.3,
     filepath >= 1.4,

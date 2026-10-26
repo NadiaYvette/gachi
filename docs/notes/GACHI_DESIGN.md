@@ -80,8 +80,7 @@ In software systems engineering, two chronic failure modes plague multi-reposito
 - **Note [Plan Governance and Rollback Mechanics]**
   [tag:note-plan-governance-rollback]
   Details the detached Git metadata store (`~/src/.plan.git`) and snapshot ledger operations for ecosystem plan delta tracking and atomic rollback.
-- **Note [Non-Destructive Skeleton Overlay]**
-  [tag:note-nondestructive-retrofit]
+- **Note [Non-Destructive Skeleton Overlay]** (`Gachi.Retrofit.Diagnostic`) [ref:note-nondestructive-retrofit]:
   Specifies the diagnostic analyzer and non-destructive file overlay semantics for adopting legacy projects into the canonical ecosystem skeleton.
 - **Note [CLI Ergonomics and Non-Destructive Initialization]** (`Gachi.CLI.Init`) [ref:note-cli-init-ergonomics]:
   Defines dual-path specification, execution modes, turnkey Git governance, and five-gate readiness for `gachi init`.

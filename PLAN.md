@@ -98,8 +98,15 @@
 
 ## Phase 4: Project Retrofitting Engine (`gachi retrofit`)
 
-- [ ] **Milestone 4.1:** Diagnostic Repository Inspector
-  - Static analysis of arbitrary target checkouts: detects language stacks, build systems, existing tests, and missing ecosystem standards.
+- [x] **Milestone 4.1:** Diagnostic Repository Inspector
+  - Established dedicated package `packages/gachi-retrofit` implementing static analysis and diagnostic inspection across arbitrary target checkouts (`Gachi.Retrofit.Diagnostic`, `Gachi.Retrofit.Types`, `Gachi.Retrofit.Report`, `Gachi.Retrofit`).
+  - Evaluates six diagnostic dimensions: primary language distributions, build system manifests and workspace layout classification (`SinglePackage`, `MultiPackage`, `Polyglot`, `Unstructured`), existing test infrastructure and framework discovery (Hspec, Tasty, QuickCheck, Hedgehog, Cargo test, Pytest), documentation coverage against canonical `DOC_STRATEGY.md` requirements (12 checklist items across 3 severity tiers), Git governance status (`.git`, `.githooks`, `core.hooksPath`, `commit-msg` validating Sarutahiko / RFC 2822 `Assisted-by:` trailers, `pre-commit`, `.gitmessage`), and physical verification harness readiness (turnkey `bin/*-verify`, Tagref, linkcheck, CLOC).
+  - Implemented quantitative ecosystem retrofit readiness scoring ($S(P) \in [0.0, 100.0]$) and prioritized Phase 4 remediation action planning.
+  - Implemented 80-column boxed terminal dashboard pretty-printing (`formatDiagnosticReport`) and GFM Markdown serialization (`formatDiagnosticMarkdown`).
+  - Wired turnkey CLI integration `gachi retrofit [--target DIR] [--dry-run] [--markdown / -m]`.
+  - Grounded `Note [Non-Destructive Skeleton Overlay]` with `[ref:note-nondestructive-retrofit]`.
+  - Verified 12/12 passing Hspec tests in `packages/gachi-retrofit/test/Main.hs` and 23/23 in `packages/gachi-cli/test/Main.hs` (132/132 total tests across 6 workspace packages).
+  - Passed all 5 physical verification gates in `./bin/gachi-verify` with 0 HLint hints, 0 broken links, 19 tags / 158 references, and 48.1% production source comment density.
 - [ ] **Milestone 4.2:** Non-Destructive Skeleton Overlay
   - Safely scaffolds missing documentation hierarchies, hooks, and verification harnesses without perturbing existing domain logic.
 - [ ] **Milestone 4.3:** Progressive Quality Gate Realization

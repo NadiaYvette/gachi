@@ -209,6 +209,8 @@ data RetrofitOptions = RetrofitOptions
   , retrofitDryRun    :: !Bool
     -- ^ Preview retrofitting actions without modifying existing source files (@--dry-run@).
     -- Reports missing verification harnesses, hooks, and documentation skeletons.
+  , retrofitMarkdown  :: !Bool
+    -- ^ Output diagnostic report in GitHub-Flavored Markdown format (@--markdown@ / @-m@).
   } deriving stock (Eq, Show)
 
 -- | Configuration parameters controlling Phase 5 'gachi plan'.
@@ -442,6 +444,11 @@ retrofitOptionsParser = RetrofitOptions
   <*> switch
         ( long "dry-run"
        <> help "Preview retrofitting actions without modifying existing files"
+        )
+  <*> switch
+        ( long "markdown"
+       <> short 'm'
+       <> help "Format diagnostic inspection report as GitHub-Flavored Markdown"
         )
 
 -- | Applicative parser for 'PlanOptions'.

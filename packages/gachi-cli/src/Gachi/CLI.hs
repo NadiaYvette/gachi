@@ -56,6 +56,7 @@ module Gachi.CLI
   , module Gachi.CLI.Doctor
   , module Gachi.CLI.Init
   , module Gachi.CLI.Options
+  , module Gachi.CLI.Retrofit
   , module Gachi.CLI.Sync
   ) where
 
@@ -95,6 +96,7 @@ import Gachi.CLI.Options
   , retrofitOptionsParser
   , syncOptionsParser
   )
+import Gachi.CLI.Retrofit (runRetrofit)
 import Gachi.CLI.Sync (runSync)
 
 --------------------------------------------------------------------------------
@@ -128,7 +130,8 @@ defaultMain = do
 --   synthesis, filesystem materialization, and Git governance lifecycle.
 -- * 'CmdSync': Dispatches directly to 'runSync', harmonizing configuration and
 --   governance stanzas across single repositories or the entire ecosystem.
--- * 'CmdRetrofit': Emits roadmap schedule notice for Phase 4 codebase retrofitting.
+-- * 'CmdRetrofit': Dispatches directly to 'runRetrofit', executing diagnostic
+--   repository inspection (Milestone 4.1) and non-destructive overlay synthesis (Phase 4).
 -- * 'CmdPlan': Emits roadmap schedule notice for Phase 5 detached Git ledger governance.
 -- * 'CmdVersion': Outputs compiler pinning, Cabal target, and EUPL-1.2 licensing stanzas.
 --
@@ -137,9 +140,7 @@ runCommand :: Command -> IO ExitCode
 runCommand (CmdInit opts) = runInit opts
 runCommand (CmdSync opts) = runSync opts
 runCommand (CmdDoctor opts) = runDoctor opts
-runCommand (CmdRetrofit _opts) = do
-  TIO.putStrLn "gachi retrofit: Non-destructive codebase retrofitting (Phase 4 - Scheduled)"
-  pure ExitSuccess
+runCommand (CmdRetrofit opts) = runRetrofit opts
 runCommand (CmdPlan _opts) = do
   TIO.putStrLn "gachi plan: Detached Git store & snapshot rollback engine (Phase 5 - Scheduled)"
   pure ExitSuccess
