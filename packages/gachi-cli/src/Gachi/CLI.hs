@@ -53,6 +53,7 @@ module Gachi.CLI
   , gachiVersion
 
     -- * Re-exports
+  , module Gachi.CLI.Doctor
   , module Gachi.CLI.Init
   , module Gachi.CLI.Options
   , module Gachi.CLI.Sync
@@ -63,6 +64,13 @@ import qualified Data.Text.IO as TIO
 import Options.Applicative (customExecParser, prefs, showHelpOnEmpty)
 import System.Exit (ExitCode(..), exitWith)
 
+import Gachi.CLI.Doctor
+  ( checkBinaryVersion
+  , checkToolchainHealth
+  , formatToolchainStatus
+  , runDoctor
+  , runSheafAudit
+  )
 import Gachi.CLI.Init
   ( detectGitAuthor
   , executeScaffolding
@@ -73,11 +81,13 @@ import Gachi.CLI.Init
   )
 import Gachi.CLI.Options
   ( Command(..)
+  , DoctorOptions(..)
   , InitOptions(..)
   , PlanOptions(..)
   , RetrofitOptions(..)
   , SyncOptions(..)
   , commandParser
+  , doctorOptionsParser
   , initOptionsParser
   , parseMode
   , parsePackageList
@@ -126,6 +136,7 @@ defaultMain = do
 runCommand :: Command -> IO ExitCode
 runCommand (CmdInit opts) = runInit opts
 runCommand (CmdSync opts) = runSync opts
+runCommand (CmdDoctor opts) = runDoctor opts
 runCommand (CmdRetrofit _opts) = do
   TIO.putStrLn "gachi retrofit: Non-destructive codebase retrofitting (Phase 4 - Scheduled)"
   pure ExitSuccess

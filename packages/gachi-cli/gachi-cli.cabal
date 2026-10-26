@@ -16,6 +16,7 @@ tested-with: GHC == 9.14.1
 library
   exposed-modules:
     Gachi.CLI
+    Gachi.CLI.Doctor
     Gachi.CLI.Init
     Gachi.CLI.Options
     Gachi.CLI.Sync

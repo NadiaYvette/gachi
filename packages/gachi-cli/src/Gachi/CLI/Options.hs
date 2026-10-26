@@ -63,6 +63,7 @@ module Gachi.CLI.Options
     Command(..)
   , InitOptions(..)
   , SyncOptions(..)
+  , DoctorOptions(..)
   , RetrofitOptions(..)
   , PlanOptions(..)
 
@@ -74,6 +75,7 @@ module Gachi.CLI.Options
   , commandParser
   , initOptionsParser
   , syncOptionsParser
+  , doctorOptionsParser
   , retrofitOptionsParser
   , planOptionsParser
   ) where
@@ -117,6 +119,8 @@ data Command
     -- ^ Initialize a new standardized multi-package workspace ('gachi init').
   | CmdSync !SyncOptions
     -- ^ Harmonically synchronize configuration across repositories ('gachi sync').
+  | CmdDoctor !DoctorOptions
+    -- ^ Diagnose workspace health, toolchain binaries, and 1-D cellular sheaf coherence ('gachi doctor').
   | CmdRetrofit !RetrofitOptions
     -- ^ Non-destructively retrofit an existing codebase ('gachi retrofit').
   | CmdPlan !PlanOptions
@@ -179,6 +183,20 @@ data SyncOptions = SyncOptions
     -- ^ Discover and synchronize all sibling repositories across the ecosystem parent directory (@--all@ / @-a@).
   , syncRemotes   :: !Bool
     -- ^ Audit and synchronize git remote replication topology (@--remotes@ / @-r@).
+  } deriving stock (Eq, Show)
+
+-- | Configuration parameters controlling the 'gachi doctor' diagnostic command.
+--
+-- Evaluates ambient system toolchains, repository health, and executes 1-D cellular
+-- sheaf cohomology audits to detect and localize cross-repository contract drift.
+data DoctorOptions = DoctorOptions
+  { doctorTargetDir :: !(Maybe FilePath)
+    -- ^ Target repository directory to inspect (@--target DIR@ / @-t DIR@).
+    -- Defaults to current working directory when omitted.
+  , doctorSheaf     :: !Bool
+    -- ^ Run 1-D cellular sheaf cohomology coherence audit (@--sheaf@ / @-s@).
+  , doctorAll       :: !Bool
+    -- ^ Discover and audit all sibling repositories across ecosystem parent directory (@--all@ / @-a@).
   } deriving stock (Eq, Show)
 
 -- | Configuration parameters controlling Phase 4 'gachi retrofit'.
@@ -248,6 +266,9 @@ mainParser = hsubparser
  <> command "sync"
       (info (CmdSync <$> syncOptionsParser)
         (progDesc "Harmonically synchronize configuration and governance stanzas across repositories (Phase 3)"))
+ <> command "doctor"
+      (info (CmdDoctor <$> doctorOptionsParser)
+        (progDesc "Diagnose workspace health, toolchain binaries, and 1-D cellular sheaf coherence (Milestone 3.5)"))
  <> command "retrofit"
       (info (CmdRetrofit <$> retrofitOptionsParser)
         (progDesc "Non-destructively retrofit an existing codebase into the canonical ecosystem skeleton (Phase 4)"))
@@ -374,6 +395,33 @@ syncOptionsParser = SyncOptions
         ( long "remotes"
        <> short 'r'
        <> help "Audit and synchronize git remote replication topology"
+        )
+
+-- | Applicative parser for 'DoctorOptions'.
+--
+-- Parses flags for workspace diagnostics and cellular sheaf coherence auditing (Milestone 3.5):
+-- * Target repository directory (@--target@ / @-t@).
+-- * Cellular sheaf coherence audit switch (@--sheaf@ / @-s@).
+-- * All ecosystem repositories switch (@--all@ / @-a@).
+doctorOptionsParser :: Parser DoctorOptions
+doctorOptionsParser = DoctorOptions
+  <$> optional
+        ( strOption
+            ( long "target"
+           <> short 't'
+           <> metavar "DIR"
+           <> help "Target repository directory to diagnose (defaults to current directory)"
+            )
+        )
+  <*> switch
+        ( long "sheaf"
+       <> short 's'
+       <> help "Evaluate 1-D cellular sheaf coherence and localize H^1 boundary obstructions"
+        )
+  <*> switch
+        ( long "all"
+       <> short 'a'
+       <> help "Audit all discovered ecosystem repositories across the parent directory"
         )
 
 -- | Applicative parser for 'RetrofitOptions'.

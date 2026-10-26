@@ -39,6 +39,13 @@ In accordance with Note [Multi-Remote Replication Topology and Provider Complian
 
 Non-compliant providers (such as SourceHut / `git.sr.ht` due to AI pair programming restrictions and email-only workflows) and plaintext HTTP URLs (`http://`) are strictly prohibited and automatically audited and reconciled via `gachi sync --remotes`.
 
+### 1.5 Cellular Sheaf Coherence & Obstruction Localization
+In accordance with Note [Cellular Sheaf Coherence and Homological Obstruction Localization] [ref:note-cellular-sheaf-coherence], cross-repository structural consensus is modeled as a 1-dimensional cellular sheaf \(\mathcal{F}\) over cell complex \(G = (V, E)\) spanning all repositories across `~/src/*`.
+The sheaf coboundary operator \(\delta^0 : C^0 \to C^1\) evaluates ten standardization dimensions (GHC 9.14.1 pinning, Cabal 3.0/3.18, EUPL-1.2, git hooks, CI matrices, agent guidance):
+- **\(H^0\) Harmonic Equilibrium (\(\ker \delta^0\)):** Certifies that all checkouts agree across interface boundaries (0 drift).
+- **\(H^1\) Boundary Obstructions (\(\operatorname{coker} \delta^0\)):** Localizes exact drifting repositories, breached contract dimensions, and actionable remediation steps without full ecosystem compilation.
+Audited interactively via `gachi doctor` and `gachi doctor --sheaf`.
+
 ---
 
 ## 2. Verification Gates & Quality Control

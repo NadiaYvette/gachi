@@ -15,6 +15,7 @@
 module Main (main) where
 
 import Control.Exception (bracket)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import System.Directory
@@ -659,3 +660,113 @@ main = hspec $ do
         remoteMissingCount finalReport `shouldBe` 0
         remoteDriftCount finalReport `shouldBe` 0
         remoteNonCompliantCount finalReport `shouldBe` 0
+
+  describe "Gachi.Sync.Sheaf (1-D Cellular Sheaf Coherence & Obstruction Localization)" $ do
+    it "constructs canonical star complex and computes topological Euler characteristic" $ do
+      let complex = buildCanonicalSheafComplex ["gachi", "polytropos"]
+      numVertices complex `shouldBe` 3 -- canonical, gachi, polytropos
+      numEdges complex `shouldBe` 20    -- 2 clients * 10 dimensions
+      eulerCharacteristic complex `shouldBe` -17 -- 3 - 20 = -17
+
+    it "evaluates coboundary delta^0 on harmonic cochain confirming 0-th cohomology H^0 equilibrium" $ do
+      let complex = buildCanonicalSheafComplex ["gachi", "polytropos"]
+          stalkGachi = canonicalRepoStalk { stalkRepoName = "gachi" }
+          stalkPoly  = canonicalRepoStalk { stalkRepoName = "polytropos" }
+          c0 = Cochain0 $ Map.fromList
+            [ ("canonical", canonicalRepoStalk)
+            , ("gachi", stalkGachi)
+            , ("polytropos", stalkPoly)
+            ]
+          (Cochain1 diffs, isHarmonic) = coboundary complex defaultEcosystemSheaf c0
+
+      isHarmonic `shouldBe` True
+      Map.size diffs `shouldBe` 20
+      all (uncurry (==)) (Map.elems diffs) `shouldBe` True
+
+      let report = evaluateSheafCoherence complex c0
+      reportIsHarmonic report `shouldBe` True
+      reportHarmonicEdges report `shouldBe` 20
+      reportDriftEdges report `shouldBe` 0
+      reportCoherencePct report `shouldBe` 100.0
+      reportObstructions report `shouldBe` []
+
+    it "localizes 1-st cohomology H^1 boundary obstructions on drifting repository configuration" $ do
+      let complex = buildCanonicalSheafComplex ["gongju"]
+          driftStalk = canonicalRepoStalk
+            { stalkRepoName        = "gongju"
+            , stalkGhcVersion      = Just "9.12.1"  -- Drift: expected 9.14.1
+            , stalkHasCommitMsg    = False          -- Drift: missing hook
+            , stalkHasVerifyRunner = False          -- Drift: missing runner
+            }
+          c0 = Cochain0 $ Map.fromList
+            [ ("canonical", canonicalRepoStalk)
+            , ("gongju", driftStalk)
+            ]
+          report = evaluateSheafCoherence complex c0
+
+      reportIsHarmonic report `shouldBe` False
+      reportHarmonicEdges report `shouldBe` 7
+      reportDriftEdges report `shouldBe` 3
+      reportCoherencePct report `shouldBe` 70.0
+
+      let obs = reportObstructions report
+      length obs `shouldBe` 3
+      let driftedDims = map (edgeDimension . obstructionEdge) obs
+      driftedDims `shouldMatchList`
+        [ ContractGhcVersion
+        , ContractGitCommitHook
+        , ContractVerifyRunner
+        ]
+
+    it "verifies restriction projections for all 10 contract dimensions" $ do
+      let stalk = canonicalRepoStalk
+      restrictRepoStalk ContractGhcVersion stalk `shouldBe` ContractText (Just "9.14.1")
+      restrictRepoStalk ContractCabalVersion stalk `shouldBe` ContractText (Just "3.0")
+      restrictRepoStalk ContractLicense stalk `shouldBe` ContractText (Just "EUPL-1.2")
+      restrictRepoStalk ContractGitCommitHook stalk `shouldBe` ContractBool True
+      restrictRepoStalk ContractGitPreCommitHook stalk `shouldBe` ContractBool True
+      restrictRepoStalk ContractGitMessage stalk `shouldBe` ContractBool True
+      restrictRepoStalk ContractHLintConfig stalk `shouldBe` ContractBool True
+      restrictRepoStalk ContractCIWorkflow stalk `shouldBe` ContractBool True
+      restrictRepoStalk ContractAgentsAdvisory stalk `shouldBe` ContractBool True
+      restrictRepoStalk ContractVerifyRunner stalk `shouldBe` ContractBool True
+
+    it "inspects live repository checkout and confirms harmonic coherence against canonical contracts" $ do
+      stalk <- inspectRepoStalk "."
+      stalkGhcVersion stalk `shouldBe` Just "9.14.1"
+      stalkLicense stalk `shouldBe` Just "EUPL-1.2"
+      stalkHasCommitMsg stalk `shouldBe` True
+      stalkHasPreCommit stalk `shouldBe` True
+      stalkHasGitMessage stalk `shouldBe` True
+      stalkHasHLint stalk `shouldBe` True
+      stalkHasCIWorkflow stalk `shouldBe` True
+      stalkHasAgentsMd stalk `shouldBe` True
+      stalkHasVerifyRunner stalk `shouldBe` True
+
+      report <- auditSheafTarget "."
+      reportIsHarmonic report `shouldBe` True
+      reportHarmonicEdges report `shouldBe` 10
+      reportDriftEdges report `shouldBe` 0
+      reportCoherencePct report `shouldBe` 100.0
+
+    it "formats aligned ASCII diagnostic reports for both harmonic and obstructed states" $ do
+      let complex = buildCanonicalSheafComplex ["gongju"]
+          driftStalk = canonicalRepoStalk
+            { stalkRepoName   = "gongju"
+            , stalkGhcVersion = Just "9.12.1"
+            }
+          c0 = Cochain0 $ Map.fromList
+            [ ("canonical", canonicalRepoStalk)
+            , ("gongju", driftStalk)
+            ]
+          report = evaluateSheafCoherence complex c0
+          formatted = formatSheafReport report
+
+      formatted `shouldSatisfy` ("Gachi Cellular Sheaf Coherence Report" `T.isInfixOf`)
+      formatted `shouldSatisfy` ("0-th Cohomology H^0 (Harmonic Equilibrium)" `T.isInfixOf`)
+      formatted `shouldSatisfy` ("1-st Cohomology H^1 (Boundary Obstructions)" `T.isInfixOf`)
+      formatted `shouldSatisfy` ("Edge: canonical" `T.isInfixOf`)
+      formatted `shouldSatisfy` ("Update cabal.project / .cabal to target GHC 9.14.1" `T.isInfixOf`)
+      case reportObstructions report of
+        (obs:_) -> obstructionMessage obs `shouldSatisfy` ("Boundary obstruction on edge" `T.isInfixOf`)
+        []      -> expectationFailure "Expected at least one obstruction"

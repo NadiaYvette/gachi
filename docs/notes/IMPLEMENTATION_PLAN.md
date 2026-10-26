@@ -230,15 +230,20 @@ gachi/
 - **Invariants:**
   - Note [Multi-Remote Replication Topology and Provider Compliance] `[ref:note-remote-topology]`: Prohibits platform lock-in, enforces sovereign P2P distribution, and purges non-compliant providers.
 
-#### Milestone 3.5: Cellular Sheaf Coherence Auditor (`gachi doctor --sheaf`)
+#### Milestone 3.5: Cellular Sheaf Coherence Auditor (`gachi doctor --sheaf`) [COMPLETED]
 - **Deliverables:**
-  - 1-D cellular sheaf model over `~/src/*` implemented via [`gargamelle-sheaf`](../../../gargamelle):
-    - Vertices ($V$): Repositories (`polytropos`, `gargamelle`, `sarutahiko`, `gachi`, `gongju`).
-    - Edges ($E$): Shared version and standardization contracts.
-    - Stalks ($\mathcal{F}$): Configuration states.
-    - Coboundary Operator ($\delta^0$): Discrepancies along boundary contracts.
-  - $H^0$ harmonic equilibrium check: Reports 0 drift when all checkouts satisfy ecosystem contracts.
-  - $H^1$ cohomology obstruction localization: Pinpoints exact repositories and drifting interface contracts.
+  - 1-D cellular sheaf model over `~/src/*` implemented in `Gachi.Sync.Sheaf`:
+    - Vertices ($V$): Repositories (`polytropos`, `gargamelle`, `sarutahiko`, `gachi`, `gongju`, and canonical reference).
+    - Edges ($E$): Shared version and standardization contracts across 10 dimensions.
+    - Stalks ($\mathcal{F}$): Observed configuration states (`RepoStalk`).
+    - Coboundary Operator ($\delta^0$): Evaluates boundary discrepancies \(\delta^0(x)_e = (\rho_{u \trianglelefteq e}(x_u), \rho_{v \trianglelefteq e}(x_v))\).
+  - $H^0$ harmonic equilibrium check: Mathematically certifies 0 drift when all checkouts satisfy ecosystem contracts.
+  - $H^1$ cohomology obstruction localization: Pinpoints exact repositories, breached contract dimensions, and remediation actions.
+  - Ambient toolchain health auditor (`checkToolchainHealth`) verifying GHC 9.14.1, Cabal 3.18, HLint, and Tagref.
+  - CLI diagnostic dispatcher `gachi doctor [--target DIR] [--sheaf / -s] [--all / -a]` in `Gachi.CLI.Doctor`.
+  - Comprehensive Hspec test suites in `gachi-sync` and `gachi-cli` (117 total passing tests across workspace).
+- **Invariants:**
+  - Note [Cellular Sheaf Coherence and Homological Obstruction Localization] `[ref:note-cellular-sheaf-coherence]`: Pure homological classification of ecosystem drift without whole-tree compilation.
 
 ---
 

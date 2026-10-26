@@ -86,6 +86,13 @@
   - Extended CLI options in `packages/gachi-cli` with `--remotes` / `-r` flag for `gachi sync` to audit and reconcile remote configurations in standalone or batch modes.
   - Canonically grounded `Note [Multi-Remote Replication Topology and Provider Compliance]` (`[ref:note-remote-topology]`).
   - Verified 47/47 passing tests in `packages/gachi-sync/test/Main.hs` and 16/16 in `packages/gachi-cli/test/Main.hs` (107/107 total tests across all workspace packages) and passed all 5 physical verification gates in `./bin/gachi-verify` with 50.1% production comment density.
+- [x] **Milestone 3.5:** Cellular Sheaf Coherence Auditor (`gachi doctor --sheaf`)
+  - Grounded 1-dimensional cellular sheaf model \(\mathcal{F}\) over ecosystem cell complex \(G = (V, E)\) in `packages/gachi-sync/src/Gachi/Sync/Sheaf.hs` with repositories as vertices \(V\) and ten standardization contract dimensions as edges \(E\).
+  - Implemented the sheaf coboundary operator \(\delta^0 : C^0(G; \mathcal{F}) \to C^1(G; \mathcal{F})\) evaluating boundary projections, mathematically certifying \(H^0\) harmonic equilibrium (zero boundary drift) when \(\delta^0(x) = 0\), and localizing \(H^1 = \operatorname{coker} \delta^0\) boundary obstructions when drift occurs.
+  - Implemented pure topology combinators (`buildCanonicalSheafComplex`, `buildPairwiseComplex`, `evaluateSheafCoherence`, `formatSheafReport`) and live filesystem inspection (`inspectRepoStalk`, `findRepositoryRoot`, `auditSheafTarget`, `auditEcosystemSheaf`).
+  - Added turnkey CLI subcommand `gachi doctor [--target DIR] [--sheaf / -s] [--all / -a]` in `packages/gachi-cli/src/Gachi/CLI/Doctor.hs` evaluating ambient toolchain health (GHC 9.14.1, Cabal 3.18, HLint, Tagref) and executing cellular sheaf coherence audits.
+  - Canonically grounded `Note [Cellular Sheaf Coherence and Homological Obstruction Localization]` (`[ref:note-cellular-sheaf-coherence]`).
+  - Verified 53/53 passing tests in `packages/gachi-sync/test/Main.hs` and 20/20 in `packages/gachi-cli/test/Main.hs` (117/117 total tests across workspace) and passed all 5 physical verification gates in `./bin/gachi-verify` with 50.1% production comment density.
 
 ---
 

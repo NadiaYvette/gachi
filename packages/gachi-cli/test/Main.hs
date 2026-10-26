@@ -122,6 +122,23 @@ main = hspec $ do
           syncRemotes opts `shouldBe` True
         _ -> expectationFailure "Expected Success (CmdSync opts)"
 
+    it "parses 'doctor' subcommand with target, sheaf, and all flags" $ do
+      let res1 = execParserPure defaultPrefs (commandParser "0.1.0.0") ["doctor"]
+      case res1 of
+        Success (CmdDoctor opts) -> do
+          doctorTargetDir opts `shouldBe` Nothing
+          doctorSheaf opts `shouldBe` False
+          doctorAll opts `shouldBe` False
+        _ -> expectationFailure "Expected Success (CmdDoctor opts) for default doctor"
+
+      let res2 = execParserPure defaultPrefs (commandParser "0.1.0.0") ["doctor", "-t", "/path/to/repo", "-s", "-a"]
+      case res2 of
+        Success (CmdDoctor opts) -> do
+          doctorTargetDir opts `shouldBe` Just "/path/to/repo"
+          doctorSheaf opts `shouldBe` True
+          doctorAll opts `shouldBe` True
+        _ -> expectationFailure "Expected Success (CmdDoctor opts) with flags"
+
   describe "Gachi.CLI.Init (Project Resolution)" $ do
     it "resolves default project when no config is provided" $ do
       let opts = InitOptions
@@ -390,3 +407,60 @@ main = hspec $ do
         rList `shouldContain` ["github"]
         rList `shouldContain` ["framagit"]
         rList `shouldContain` ["disroot"]
+
+  describe "Gachi.CLI.Doctor (Diagnostics & Sheaf Auditing)" $ do
+    it "audits ambient toolchain binaries successfully" $ do
+      toolchainOk <- checkToolchainHealth
+      toolchainOk `shouldBe` True
+
+    it "runs sheaf coherence audit via doctor --sheaf" $ do
+      let docOpts = DoctorOptions
+            { doctorTargetDir = Nothing
+            , doctorSheaf     = True
+            , doctorAll       = False
+            }
+      exitCode <- runDoctor docOpts
+      exitCode `shouldBe` ExitSuccess
+
+    it "runs general doctor on an initialized workspace successfully" $ do
+      withTempDir "gachi-cli-doctor" $ \tmpDir -> do
+        let targetDir = tmpDir </> "doctor-proj"
+            initOpts = InitOptions
+              { initProjectName = Just "doctor-proj"
+              , initConfigFile  = Nothing
+              , initTargetDir   = Just targetDir
+              , initMode        = FailOnExisting
+              , initAuthorName  = Just "Doctor Tester"
+              , initAuthorEmail = Just "doctor@example.com"
+              , initDescription = Just "Test workspace for doctor"
+              , initPackages    = []
+              , initNoGit       = False
+              , initDryRun      = False
+              , initInteractive = False
+              }
+        initCode <- runInit initOpts
+        initCode `shouldBe` ExitSuccess
+
+        let docOpts = DoctorOptions
+              { doctorTargetDir = Just targetDir
+              , doctorSheaf     = False
+              , doctorAll       = False
+              }
+
+        -- Pre-sync doctor detects missing CI workflow obstruction
+        preSyncExit <- runDoctor docOpts
+        preSyncExit `shouldBe` ExitFailure 1
+
+        -- Sync repository to install standardized CI workflows
+        let syncOpts = SyncOptions
+              { syncTargetDir = Just targetDir
+              , syncDryRun    = False
+              , syncAll       = False
+              , syncRemotes   = False
+              }
+        syncCode <- runSync syncOpts
+        syncCode `shouldBe` ExitSuccess
+
+        -- Post-sync doctor confirms harmonic equilibrium (10/10 contracts coherent)
+        postSyncExit <- runDoctor docOpts
+        postSyncExit `shouldBe` ExitSuccess

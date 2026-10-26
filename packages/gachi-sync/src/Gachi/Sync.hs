@@ -106,6 +106,9 @@ module Gachi.Sync
 
     -- * Multi-Remote Replication Topology & Provider Compliance
   , module Gachi.Sync.Remote
+
+    -- * Cellular Sheaf Cohomology & Ecosystem Coherence
+  , module Gachi.Sync.Sheaf
   ) where
 
 import Gachi.Sync.Audit
@@ -115,4 +118,5 @@ import Gachi.Sync.Engine
 import Gachi.Sync.Hash
 import Gachi.Sync.Matrix
 import Gachi.Sync.Remote
+import Gachi.Sync.Sheaf
 import Gachi.Sync.Types
