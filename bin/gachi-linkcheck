@@ -183,6 +183,16 @@ def check_file_links(file_path, anchors_cache, repo_root):
             else:
                 target_abs = os.path.normpath(os.path.join(os.path.dirname(file_path), path_part))
 
+            # Verify target path is within repository root (intra-corpus requirement)
+            try:
+                rel_to_repo = os.path.relpath(target_abs, repo_root)
+                if rel_to_repo.startswith("..") or rel_to_repo == "..":
+                    broken.append((line_idx, raw_target, f"Target file '{target_abs}' escapes repository root"))
+                    continue
+            except ValueError:
+                broken.append((line_idx, raw_target, f"Target file '{target_abs}' escapes repository root"))
+                continue
+
             # Verify target file exists
             if not os.path.exists(target_abs):
                 rel_target = os.path.relpath(target_abs, repo_root) if target_abs.startswith(repo_root) else target_abs

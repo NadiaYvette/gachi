@@ -4,7 +4,7 @@
 [![GHC: 9.14.1](https://img.shields.io/badge/GHC-9.14.1-purple.svg)](cabal.project)
 [![Verification: 5 Gates](https://img.shields.io/badge/Verification-5%20Gates%20Passed-brightgreen.svg)](bin/gachi-verify)
 
-`gachi-sync` is the core standardization and propagation engine of the Gachi ecosystem framework. It establishes the canonical 9-dimensional Standardization Matrix ([`~/src/PLAN.md` §1.A](../../../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi)), canonical asset catalog, repository audit engine, and differential configuration propagation mechanisms (`gachi sync`).
+`gachi-sync` is the core standardization and propagation engine of the Gachi ecosystem framework. It establishes the canonical 9-dimensional Standardization Matrix (`~/src/PLAN.md` §1.A), canonical asset catalog, repository audit engine, and differential configuration propagation mechanisms (`gachi sync`).
 
 ---
 

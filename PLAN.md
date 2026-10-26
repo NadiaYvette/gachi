@@ -2,7 +2,7 @@
 
 **Status:** ACTIVE STRATEGIC ROADMAP · October 2026  
 **Scope:** Ecosystem Skeleton Generation, Chattering Configuration Propagation, and Osteological Computing  
-**Canonical Anchor:** Linked to and implementing [`../PLAN.md` §1](../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi)  
+**Canonical Anchor:** Linked to and implementing `~/src/PLAN.md` §1  
 **Implementation Plan:** [`docs/notes/IMPLEMENTATION_PLAN.md`](docs/notes/IMPLEMENTATION_PLAN.md)
 
 ---

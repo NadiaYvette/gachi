@@ -25,4 +25,4 @@ Welcome to the `gachi` technical documentation corpus.
 - [`packages/gachi-sync/`](../packages/gachi-sync/) — Cross-repository standardization matrix, canonical shared asset catalog, repository audit engine, and differential configuration propagation (`gachi sync`).
 
 ## Upstream & Ecosystem Planning
-- [`~/src/PLAN.md` §1](../../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi) — Parent ecosystem infrastructure mandate designating `gachi`.
+- `~/src/PLAN.md` §1 — Parent ecosystem infrastructure mandate designating `gachi`.

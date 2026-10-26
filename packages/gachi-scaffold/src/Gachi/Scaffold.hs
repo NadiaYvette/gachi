@@ -8,7 +8,7 @@
 -- = Architectural Context & Invariants
 --
 -- Gachi serves as the ecosystem's foundational project skeleton generator and
--- configuration propagation engine ([`~/src/PLAN.md` §1](../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi)).
+-- configuration propagation engine (@~/src/PLAN.md@ §1).
 --
 -- Rather than generating ad-hoc or incomplete project skeletons that require
 -- hours of manual bootstrapping, Gachi generates turn-key repositories that satisfy

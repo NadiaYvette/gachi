@@ -2,7 +2,7 @@
 
 **Declarative Multi-Package Workspace Scaffolding Engine for Gachi**
 
-`gachi-scaffold` generates complete, turn-key Haskell workspaces adhering strictly to the canonical ecosystem standardization matrix ([`~/src/PLAN.md` §1](../../../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi) and `Note [Ecosystem Standardization Invariants]` `[ref:note-ecosystem-standardization]`).
+`gachi-scaffold` generates complete, turn-key Haskell workspaces adhering strictly to the canonical ecosystem standardization matrix (`~/src/PLAN.md` §1 and `Note [Ecosystem Standardization Invariants]` `[ref:note-ecosystem-standardization]`).
 
 ## Overview
 

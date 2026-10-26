@@ -4,7 +4,7 @@
 >
 > When the gashadokuro approaches, its towering bones vibrate in ominous unison, emitting the rhythmic *gachi-gachi* cadence that warns all in its shadow of an unyielding, unified presence.
 
-In our software engineering ecosystem, `gachi` is the **Project Skeleton & Configuration Propagation Infrastructure** across `~/src/*` (governed by [`../PLAN.md` §1](../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi)), paired with an unboxed, high-performance osteological computation substrate.
+In our software engineering ecosystem, `gachi` is the **Project Skeleton & Configuration Propagation Infrastructure** across `~/src/*` (governed by `~/src/PLAN.md` §1), paired with an unboxed, high-performance osteological computation substrate.
 
 Just as a biological skeleton forms the rigid, immutable osseous scaffold that preserves anatomical integrity, `gachi` establishes and guarantees the canonical structural skeletons of our repositories. And just as the teeth of the gashadokuro chatter in rapid harmonic resonance, `gachi` propagates formatting standards, linter rules, git hooks, CI matrices, and agent advisory contexts across all ecosystem repositories in lockstep.
 

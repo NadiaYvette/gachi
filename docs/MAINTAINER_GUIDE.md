@@ -25,7 +25,7 @@ SPDX-License-Identifier: EUPL-1.2
 - **Directional Joints:** Multigraph connectivity is modeled via contiguous directed joint segments. See Note [Directional Joints and Incident Traversal] [ref:note-directional-joints-traversal].
 - **Lock-Free Atomic Synchronization:** Chattering state transitions use atomic memory references and monotonic ID counters. See Note [Chattering Lock-Free Atomic Synchronization] [ref:note-chattering-synchronization].
 
-### 1.3 Ecosystem Infrastructure Governance ([`~/src/PLAN.md` §1](../../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi))
+### 1.3 Ecosystem Infrastructure Governance (`~/src/PLAN.md` §1)
 - **Skeleton Conformity:** Generated project templates (`gachi init`) must strictly adhere to the ecosystem standardization matrix (multi-package layout, `.githooks/`, `.hlint.yaml`, `docs/`, `bin/`).
 - **Chattering Sync Idempotency:** Configuration propagation (`gachi sync`) must be deterministic, atomic, and idempotent, never clobbering project-specific customizations.
 - **Non-Destructive Retrofitting:** Retrofitting operations (`gachi retrofit`) must non-destructively overlay ecosystem scaffolding without altering existing domain code.

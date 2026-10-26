@@ -4,7 +4,7 @@ Pointer file. Canonical sources win on any disagreement.
 
 ## What this repository is
 
-`gachi` (from the onomatopoeia for gashadokuro teeth chattering, がちがち) — the ecosystem project skeleton generator and configuration propagation infrastructure ([`~/src/PLAN.md` §1](../PLAN.md#1-project-skeleton-&-configuration-propagation-infrastructure-gachi)), paired with a high-performance osteological computation and structural Haskell substrate. Flat contiguous memory layouts, unboxed representations, and deterministic lock-free state synchronization.
+`gachi` (from the onomatopoeia for gashadokuro teeth chattering, がちがち) — the ecosystem project skeleton generator and configuration propagation infrastructure (`~/src/PLAN.md` §1), paired with a high-performance osteological computation and structural Haskell substrate. Flat contiguous memory layouts, unboxed representations, and deterministic lock-free state synchronization.
 
 ## Read first, in this order
 
