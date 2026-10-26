@@ -37,6 +37,11 @@
 --     evaluating checkouts against matrix contracts, detecting content and
 --     permission drift, and rendering diagnostic ASCII tables ('formatAuditReport').
 --
+-- 5.  __Forge-Tiered CI Matrix Synthesis ("Gachi.Sync.CI"):__
+--     Declarative models ('ForgeType', 'CITier', 'CISpec') and deterministic
+--     generators synthesizing high-resource GitHub Actions workflows and lightweight
+--     community CI pipelines (GitLab, Woodpecker, Forgejo, Radicle).
+--
 -- == Operational Invariants
 --
 -- All modules within @gachi-sync@ adhere to strict engineering guarantees:
@@ -88,10 +93,14 @@ module Gachi.Sync
 
     -- * Differential Cryptographic Hashing
   , module Gachi.Sync.Hash
+
+    -- * Forge-Tiered CI Matrix Synthesis
+  , module Gachi.Sync.CI
   ) where
 
 import Gachi.Sync.Audit
 import Gachi.Sync.Catalog
+import Gachi.Sync.CI
 import Gachi.Sync.Engine
 import Gachi.Sync.Hash
 import Gachi.Sync.Matrix

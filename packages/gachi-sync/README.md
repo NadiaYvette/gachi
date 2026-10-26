@@ -43,6 +43,9 @@ In accordance with Note [Ecosystem Standardization Invariants] ([`ref:note-ecosy
 - **[`Gachi.Sync.Matrix`](src/Gachi/Sync/Matrix.hs):** Canonical 9-dimensional Standardization Matrix definition and category lookup.
 - **[`Gachi.Sync.Catalog`](src/Gachi/Sync/Catalog.hs):** Pure content generators for shared formatters, linters, Git hooks, CI workflows, and agent rules.
 - **[`Gachi.Sync.Audit`](src/Gachi/Sync/Audit.hs):** Non-destructive audit engine inspecting physical workspaces against matrix contracts and formatting diagnostic reports.
+- **[`Gachi.Sync.CI`](src/Gachi/Sync/CI.hs):** Forge-tiered CI matrix synthesizer and asymmetric runner allocation engine.
+- **[`Gachi.Sync.Hash`](src/Gachi/Sync/Hash.hs):** Pure FIPS 180-2 SHA-256 differential cryptographic hashing engine.
+- **[`Gachi.Sync.Engine`](src/Gachi/Sync/Engine.hs):** Harmonic chattering synchronization engine enforcing mathematical idempotency \(f(f(x)) = f(x)\).
 - **[`Gachi.Sync`](src/Gachi/Sync.hs):** Root umbrella module re-exporting the complete synchronization API.
 
 ---

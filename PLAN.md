@@ -71,8 +71,14 @@
   - Grounded `Note [Harmonic Chattering Synchronization and Differential Propagation]` (`[ref:note-harmonic-sync]`).
   - Verified 30/30 passing `gachi-sync` tests and 14/14 passing `gachi-cli` tests covering SHA-256 NIST vectors, plan evaluation, dry-run simulation, live repair, ecosystem discovery, and mathematical idempotency.
   - Passed all 5 physical verification gates in `./bin/gachi-verify`: 0 HLint hints, all test suites passed, 15 tags and 110 references validated, 0 broken markdown links, and 50.0% production source comment density.
-- [ ] **Milestone 3.3:** Forge-Tiered CI Matrix Generation
-  - Synthesis of tailored CI configs: heavyweight physical verification for GitHub Actions vs lightweight static gates for resource-constrained community forges (GitLab, Framagit, Disroot).
+- [x] **Milestone 3.3:** Forge-Tiered CI Matrix Generation
+  - Established dedicated CI synthesis module `packages/gachi-sync/src/Gachi/Sync/CI.hs` modeling `ForgeType` (`ForgeGitHub`, `ForgeGitLab`, `ForgeWoodpecker`, `ForgeForgejo`, `ForgeRadicle`), `CITier` (`TierHighResource`, `TierLightweightStatic`), and `CISpec`.
+  - Implemented pure deterministic workflow generators for high-resource commercial runners (`generateGitHubWorkflow`) featuring GHC 9.14.1, Cabal 3.18.1.0, Cabal store caching (`actions/cache@v4`), AppArmor unprivileged user namespace configuration, and turnkey physical verification (`./bin/<project>-verify`).
+  - Implemented lightweight static gate generators for community runners (`generateGitLabWorkflow`, `generateWoodpeckerWorkflow`, `generateRadicleWorkflow`) executing Tagref (0 dangling references), linkcheck (0 broken links), and comment density audits (`./bin/<project>-cloc --check`) inside minimal `debian:bookworm-slim` containers in < 15 seconds without GHC compilation overhead.
+  - Provided standard defaults (`defaultGitHubSpec`, `defaultGitLabSpec`, `defaultWoodpeckerSpec`, `canonicalForgeSpecs`), classification predicates (`classifyForge`, `classifyTier`, `isHighResource`, `isLightweight`), and matrix synthesis combinators (`synthesizeCIAssets`, `canonicalCIAssets`, `ciWorkflowAssets`).
+  - Integrated CI generators into `Gachi.Sync.Catalog` (`githubCiTemplate`, `gitlabCiTemplate`, `woodpeckerCiTemplate`) and `Gachi.Sync.Matrix` (`ciWorkflowAssets`).
+  - Canonically grounded `Note [Forge-Tiered CI Resource Allocation and Static Gate Partitioning]` (`[ref:note-forge-tiered-ci]`) with 16 tags and 128 references validated across 82 files.
+  - Verified 39/39 passing Hspec tests in `packages/gachi-sync/test/Main.hs` (97/97 total tests across all 5 packages) and passed all 5 physical verification gates in `./bin/gachi-verify` with 50.7% production comment density.
 
 ---
 

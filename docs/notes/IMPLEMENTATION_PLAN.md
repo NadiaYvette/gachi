@@ -204,13 +204,17 @@ gachi/
 - **Invariants:**
   - Idempotency guarantee: Executing `gachi sync` repeatedly on a clean repository results in a no-op ($f(f(x)) = f(x)$).
 
-#### Milestone 3.3: Forge-Tiered CI Matrix Synthesizer
+#### Milestone 3.3: Forge-Tiered CI Matrix Synthesizer [COMPLETED]
 - **Deliverables:**
-  - Automated generation of forge-specific CI files tailored to runner resource constraints:
-    - **High-Resource (GitHub Actions):** Full physical verification, compilation of all packages with `--enable-tests`, haddock documentation coverage, tagref verification, literate doccheck.
-    - **Resource-Constrained (GitLab, Framagit, Disroot):** Lightweight static gates only (Tagref 0 dangling references, Linkcheck 0 broken links, CLOC comment density audit).
+  - Automated generation of forge-specific CI files tailored to runner resource constraints (`packages/gachi-sync/src/Gachi/Sync/CI.hs`):
+    - **High-Resource (GitHub Actions):** Full physical verification, compilation of all packages with `--enable-tests`, haddock documentation coverage, tagref verification, AppArmor namespace setup, Cabal store caching (`actions/cache@v4`), literate doccheck, and turnkey verification script execution (`./bin/<project>-verify`).
+    - **Resource-Constrained (GitLab, Framagit, Disroot, Woodpecker, Radicle):** Lightweight static gates only (Tagref 0 dangling references, Linkcheck 0 broken links, CLOC comment density audit) in minimal `debian:bookworm-slim` container executing in < 15 seconds without GHC compilation overhead.
+  - Standard pre-configured specifications (`defaultGitHubSpec`, `defaultGitLabSpec`, `defaultWoodpeckerSpec`, `canonicalForgeSpecs`).
+  - Path and tier classification predicates (`classifyForge`, `classifyTier`, `isHighResource`, `isLightweight`).
+  - Matrix synthesis combinators (`synthesizeCIAssets`, `canonicalCIAssets`, `ciWorkflowAssets`).
+  - Integration with `Gachi.Sync.Catalog` and `Gachi.Sync.Matrix`.
 - **Invariants:**
-  - Prevents resource exhaustion on self-hosted community runners while maintaining strict upstream verification gates.
+  - Note [Forge-Tiered CI Resource Allocation and Static Gate Partitioning] `[ref:note-forge-tiered-ci]`: Prevents resource exhaustion and OOM kernel kills on self-hosted community runners while maintaining strict upstream verification gates.
 
 #### Milestone 3.4: Multi-Remote Topology Management
 - **Deliverables:**

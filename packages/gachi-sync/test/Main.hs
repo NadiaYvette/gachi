@@ -11,6 +11,7 @@
 -- 4. Audit engine accuracy: clean compliance, content drift detection, missing file reporting,
 --    and permission drift detection on physical workspaces.
 -- 5. Diagnostic ASCII report formatting.
+-- 6. Forge-tiered CI matrix generation, asymmetric runner allocation, and classification (Milestone 3.3).
 module Main (main) where
 
 import Control.Exception (bracket)
@@ -337,3 +338,105 @@ main = hspec $ do
       let resText = formatSyncResult res
       resText `shouldSatisfy` (\t -> "Gachi Synchronization Execution Summary" `T.isInfixOf` t)
       resText `shouldSatisfy` (\t -> "DRY RUN" `T.isInfixOf` t)
+
+  describe "Gachi.Sync.CI (Forge-Tiered CI Matrix Synthesis)" $ do
+    it "classifies forge types from standard workflow paths" $ do
+      classifyForge ".github/workflows/ci.yml" `shouldBe` Just ForgeGitHub
+      classifyForge ".github/workflows/verify.yaml" `shouldBe` Just ForgeGitHub
+      classifyForge ".gitlab-ci.yml" `shouldBe` Just ForgeGitLab
+      classifyForge ".woodpecker.yml" `shouldBe` Just ForgeWoodpecker
+      classifyForge ".woodpecker/verify.yml" `shouldBe` Just ForgeWoodpecker
+      classifyForge ".forgejo/workflows/ci.yml" `shouldBe` Just ForgeForgejo
+      classifyForge ".radicle/ci.yaml" `shouldBe` Just ForgeRadicle
+      classifyForge "docs/INDEX.md" `shouldBe` Nothing
+
+    it "classifies resource tiers accurately from paths and specifications" $ do
+      classifyTier ".github/workflows/ci.yml" `shouldBe` Just TierHighResource
+      classifyTier ".gitlab-ci.yml" `shouldBe` Just TierLightweightStatic
+      classifyTier ".woodpecker.yml" `shouldBe` Just TierLightweightStatic
+      classifyTier ".forgejo/workflows/ci.yml" `shouldBe` Just TierHighResource
+      classifyTier ".radicle/ci.yaml" `shouldBe` Just TierLightweightStatic
+      classifyTier "docs/INDEX.md" `shouldBe` Nothing
+
+      isHighResource defaultGitHubSpec `shouldBe` True
+      isLightweight defaultGitHubSpec `shouldBe` False
+
+      isLightweight defaultGitLabSpec `shouldBe` True
+      isHighResource defaultGitLabSpec `shouldBe` False
+
+      isLightweight defaultWoodpeckerSpec `shouldBe` True
+      isHighResource defaultForgejoSpec `shouldBe` True
+      isLightweight defaultRadicleSpec `shouldBe` True
+
+    it "synthesizes complete high-resource GitHub Actions workflows" $ do
+      let wf = generateGitHubWorkflow defaultGitHubSpec testProject
+      wf `shouldSatisfy` ("actions/checkout@v4" `T.isInfixOf`)
+      wf `shouldSatisfy` ("actions/cache@v4" `T.isInfixOf`)
+      wf `shouldSatisfy` ("haskell-actions/setup@v2" `T.isInfixOf`)
+      wf `shouldSatisfy` ("ghc-version: '9.14.1'" `T.isInfixOf`)
+      wf `shouldSatisfy` ("cabal-version: '3.18.1.0'" `T.isInfixOf`)
+      wf `shouldSatisfy` ("cabal build all --enable-tests" `T.isInfixOf`)
+      wf `shouldSatisfy` ("./bin/audit-test-cloc --check" `T.isInfixOf`)
+      wf `shouldSatisfy` ("./bin/audit-test-verify" `T.isInfixOf`)
+      wf `shouldSatisfy` ("./bin/audit-test-tagref" `T.isInfixOf`)
+      wf `shouldSatisfy` ("./bin/audit-test-linkcheck" `T.isInfixOf`)
+      wf `shouldSatisfy` ("sudo apt-get install -y bubblewrap sqlite3 z3" `T.isInfixOf`)
+      wf `shouldSatisfy` ("kernel.apparmor_restrict_unprivileged_userns=0" `T.isInfixOf`)
+      wf `shouldSatisfy` ("url.\"https://github.com/\".insteadOf" `T.isInfixOf`)
+
+    it "synthesizes lightweight community GitLab CI workflows without compiler overhead" $ do
+      let wf = generateGitLabWorkflow defaultGitLabSpec testProject
+      wf `shouldSatisfy` ("image: debian:bookworm-slim" `T.isInfixOf`)
+      wf `shouldSatisfy` ("stages:" `T.isInfixOf`)
+      wf `shouldSatisfy` ("tagref-check:" `T.isInfixOf`)
+      wf `shouldSatisfy` ("./bin/audit-test-tagref" `T.isInfixOf`)
+      wf `shouldSatisfy` ("./bin/audit-test-linkcheck" `T.isInfixOf`)
+      wf `shouldSatisfy` ("./bin/audit-test-cloc --check" `T.isInfixOf`)
+      -- Crucial invariant: No heavy GHC build steps in lightweight community CI
+      wf `shouldNotSatisfy` ("cabal build" `T.isInfixOf`)
+      wf `shouldNotSatisfy` ("ghc-version" `T.isInfixOf`)
+
+    it "synthesizes lightweight Woodpecker CI pipelines" $ do
+      let wf = generateWoodpeckerWorkflow defaultWoodpeckerSpec testProject
+      wf `shouldSatisfy` ("pipeline:" `T.isInfixOf`)
+      wf `shouldSatisfy` ("image: debian:bookworm-slim" `T.isInfixOf`)
+      wf `shouldSatisfy` ("./bin/audit-test-tagref" `T.isInfixOf`)
+      wf `shouldSatisfy` ("./bin/audit-test-linkcheck" `T.isInfixOf`)
+      wf `shouldSatisfy` ("./bin/audit-test-cloc --check" `T.isInfixOf`)
+      wf `shouldNotSatisfy` ("cabal build" `T.isInfixOf`)
+
+    it "synthesizes Radicle P2P local verification broker configurations" $ do
+      let wf = generateRadicleWorkflow defaultRadicleSpec testProject
+      wf `shouldSatisfy` ("version: 1" `T.isInfixOf`)
+      wf `shouldSatisfy` ("pipelines:" `T.isInfixOf`)
+      wf `shouldSatisfy` ("./bin/audit-test-tagref" `T.isInfixOf`)
+      wf `shouldSatisfy` ("./bin/audit-test-linkcheck" `T.isInfixOf`)
+      wf `shouldSatisfy` ("./bin/audit-test-cloc --check" `T.isInfixOf`)
+
+    it "converts CI specifications into standard matrix assets in CategoryCIWorkflow" $ do
+      let assets = synthesizeCIAssets canonicalForgeSpecs
+      length assets `shouldBe` 3
+      all (\a -> assetCategory a == CategoryCIWorkflow) assets `shouldBe` True
+      map assetPath assets `shouldMatchList`
+        [ ".github/workflows/ci.yml"
+        , ".gitlab-ci.yml"
+        , ".woodpecker.yml"
+        ]
+      map assetRequired assets `shouldMatchList` [True, True, False]
+      any assetExecutable assets `shouldBe` False
+
+    it "extracts CI workflow assets from canonicalMatrix via ciWorkflowAssets" $ do
+      let ciAssets = ciWorkflowAssets canonicalMatrix
+      length ciAssets `shouldSatisfy` (>= 2)
+      map assetPath ciAssets `shouldContain` [".github/workflows/ci.yml", ".gitlab-ci.yml"]
+      all (\a -> assetCategory a == CategoryCIWorkflow) ciAssets `shouldBe` True
+
+    it "supports high-resource GitLab and lightweight GitHub overrides via forgeDefaultSpec" $ do
+      let highGitLab = forgeDefaultSpec ForgeGitLab TierHighResource
+      ciTier highGitLab `shouldBe` TierHighResource
+      ciEnableTests highGitLab `shouldBe` True
+      ciContainerImage highGitLab `shouldBe` "haskell:9.14"
+
+      let lightGH = forgeDefaultSpec ForgeGitHub TierLightweightStatic
+      ciTier lightGH `shouldBe` TierLightweightStatic
+      ciEnableTests lightGH `shouldBe` False

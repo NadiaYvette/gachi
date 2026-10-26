@@ -67,6 +67,8 @@
 --     high-resource GitHub Actions (@.github/workflows/ci.yml@) versus lightweight
 --     static verification gates on community forges (@.gitlab-ci.yml@).
 --     Conserves shared community runner quotas while enforcing rigorous testing.
+--     See Note [Forge-Tiered CI Resource Allocation and Static Gate Partitioning]
+--     [ref:note-forge-tiered-ci].
 --
 -- 8.  __Polyglot Invariants (Dimension 8):__
 --     Cross-language FFI boundary invariants, C/C++ clang-format styling,
@@ -108,6 +110,7 @@ module Gachi.Sync.Matrix
 
     -- * Query & Filter Combinators
   , assetsForCategory
+  , ciWorkflowAssets
   , requiredAssets
   , optionalAssets
   , executableAssets
@@ -507,6 +510,21 @@ canonicalMatrix = StandardizationMatrix
 assetsForCategory :: AssetCategory -> StandardizationMatrix -> [StandardAsset]
 assetsForCategory cat matrix =
   filter (\a -> assetCategory a == cat) (matrixAssets matrix)
+
+-- | Extracts all forge-tiered CI workflow assets (Dimension 7) from a matrix.
+--
+-- Filters assets belonging to 'CategoryCIWorkflow'.
+--
+-- See Note [Forge-Tiered CI Resource Allocation and Static Gate Partitioning]
+-- [ref:note-forge-tiered-ci].
+--
+-- === Worked Example
+--
+-- >>> let ciAssets = ciWorkflowAssets canonicalMatrix
+-- >>> map assetPath ciAssets
+-- [".github/workflows/ci.yml",".gitlab-ci.yml"]
+ciWorkflowAssets :: StandardizationMatrix -> [StandardAsset]
+ciWorkflowAssets = assetsForCategory CategoryCIWorkflow
 
 -- | Extracts all required assets from a matrix.
 --

@@ -70,6 +70,7 @@ module Gachi.Sync.Catalog
     -- * Forge-Tiered CI Workflows (Dimension 7)
   , githubCiTemplate
   , gitlabCiTemplate
+  , woodpeckerCiTemplate
 
     -- * Agent Advisory & Rules (Dimension 9)
   , agentsTemplate
@@ -90,7 +91,15 @@ module Gachi.Sync.Catalog
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import Gachi.Schema.Project (Project, projectName)
+import Gachi.Schema.Project (Project)
+import Gachi.Sync.CI
+  ( defaultGitHubSpec
+  , defaultGitLabSpec
+  , defaultWoodpeckerSpec
+  , generateGitHubWorkflow
+  , generateGitLabWorkflow
+  , generateWoodpeckerWorkflow
+  )
 import Gachi.Scaffold.Templates
   ( agentsTemplate
   , cabalProjectLocalTemplate
@@ -212,80 +221,13 @@ clangFormatTemplate = T.unlines
 --
 -- == Asymmetric CI Resource Strategy
 --
--- Commercial forges like GitHub provide high-capacity container runners with ample
--- RAM, multi-core virtual CPUs, and generous monthly minutes. This workflow
--- exploits those resources to execute the full heavyweight physical verification suite:
---
--- 1. __Static Cross-Reference Gate:__ Downloads and executes Tagref to validate 100%
---    of in-code tags and reference pointers across the repository.
--- 2. __Markdown Link Gate:__ Verifies all intra-corpus relative links and section anchors.
--- 3. __Hermetic Environment:__ Installs system libraries (bubblewrap, sqlite3, z3).
--- 4. __Compiler Toolchain:__ Configures GHC 9.14.1 and Cabal 3.18.1.0 with store caching.
--- 5. __Static Linter Gate:__ Installs and executes HLint under zero-hint cleanliness.
--- 6. __Test Suite Gate:__ Compiles all packages and executes the complete Hspec test suite.
--- 7. __Turnkey Verification:__ Invokes @./bin/<project>-verify@ to ensure all gates pass.
+-- In accordance with Note [Forge-Tiered CI Resource Allocation and Static Gate Partitioning]
+-- [ref:note-forge-tiered-ci], commercial forges like GitHub provide high-capacity
+-- container runners with ample RAM, multi-core virtual CPUs, and generous monthly
+-- allowances. This template evaluates 'generateGitHubWorkflow' using 'defaultGitHubSpec',
+-- compiling all packages under GHC 9.14.1 with @--enable-tests@ and running all 5 physical gates.
 githubCiTemplate :: Project -> Text
-githubCiTemplate proj =
-  let pName = projectName proj
-  in T.unlines
-    [ "name: CI Verification Harness"
-    , ""
-    , "on:"
-    , "  push:"
-    , "    branches: [ master ]"
-    , "  pull_request:"
-    , "    branches: [ master ]"
-    , ""
-    , "jobs:"
-    , "  verify:"
-    , "    name: Tagref & Verification Gates"
-    , "    runs-on: ubuntu-latest"
-    , "    steps:"
-    , "      - name: Check out repository"
-    , "        uses: actions/checkout@v4"
-    , ""
-    , "      - name: Install Tagref"
-    , "        run: |"
-    , "          mkdir -p \"${HOME}/.local/bin\""
-    , "          PREFIX=\"${HOME}/.local/bin\" curl https://raw.githubusercontent.com/stepchowfun/tagref/main/install.sh -LSfs | sh"
-    , "          echo \"${HOME}/.local/bin\" >> $GITHUB_PATH"
-    , ""
-    , "      - name: Verify Tagref Cross-References"
-    , "        run: ./bin/" <> pName <> "-tagref"
-    , ""
-    , "      - name: Verify Markdown Links & Anchors"
-    , "        run: ./bin/" <> pName <> "-linkcheck"
-    , ""
-    , "      - name: Install System Dependencies"
-    , "        run: |"
-    , "          sudo apt-get update"
-    , "          sudo apt-get install -y bubblewrap sqlite3 z3"
-    , ""
-    , "      - name: Set up Haskell Toolchain"
-    , "        uses: haskell-actions/setup@v2"
-    , "        with:"
-    , "          ghc-version: '9.14.1'"
-    , "          cabal-version: '3.18.1.0'"
-    , ""
-    , "      - name: Install HLint"
-    , "        run: ghcup install hlint recommended --set || true"
-    , ""
-    , "      - name: Cache Cabal artifacts"
-    , "        uses: actions/cache@v4"
-    , "        with:"
-    , "          path: |"
-    , "            ~/.cabal/store"
-    , "            dist-newstyle"
-    , "          key: ${{ runner.os }}-cabal-${{ hashFiles('cabal.project', '**/*.cabal') }}"
-    , "          restore-keys: |"
-    , "            ${{ runner.os }}-cabal-"
-    , ""
-    , "      - name: Build All Packages"
-    , "        run: cabal build all --enable-tests"
-    , ""
-    , "      - name: Run Complete Verification Suite"
-    , "        run: ./bin/" <> pName <> "-verify"
-    ]
+githubCiTemplate = generateGitHubWorkflow defaultGitHubSpec
 
 -- | GitLab CI configuration tailored for resource-constrained community runners.
 --
@@ -295,32 +237,26 @@ githubCiTemplate proj =
 -- limited shared runner compute time and strict memory quotas. Running full GHC
 -- compilation on every push would deplete shared runner quotas.
 --
--- This configuration establishes an asymmetric, lightweight verification pipeline:
+-- Per Note [Forge-Tiered CI Resource Allocation and Static Gate Partitioning]
+-- [ref:note-forge-tiered-ci], this configuration establishes an asymmetric,
+-- lightweight verification pipeline inside @debian:bookworm-slim@:
 -- * Executes fast static verification gates (Tagref cross-references and Markdown link check).
 -- * Runs the lightweight CLOC comment density audit.
 -- * Completely bypasses heavy GHC compilation and link stages, finishing in < 15 seconds.
 gitlabCiTemplate :: Project -> Text
-gitlabCiTemplate proj =
-  let pName = projectName proj
-  in T.unlines
-    [ "# SPDX-License-Identifier: EUPL-1.2"
-    , "# GitLab CI configuration for " <> pName <> " (Framagit, Disroot)"
-    , ""
-    , "stages:"
-    , "  - verify"
-    , ""
-    , "tagref-check:"
-    , "  stage: verify"
-    , "  image: debian:bookworm-slim"
-    , "  before_script:"
-    , "    - apt-get update && apt-get install -y curl git python3"
-    , "    - mkdir -p /usr/local/bin"
-    , "    - PREFIX=/usr/local/bin curl https://raw.githubusercontent.com/stepchowfun/tagref/main/install.sh -LSfs | sh"
-    , "  script:"
-    , "    - ./bin/" <> pName <> "-tagref"
-    , "    - ./bin/" <> pName <> "-linkcheck"
-    , "    - ./bin/" <> pName <> "-cloc --check"
-    ]
+gitlabCiTemplate = generateGitLabWorkflow defaultGitLabSpec
+
+-- | Woodpecker CI pipeline configuration for lightweight self-hosted runners.
+--
+-- == Self-Hosted Container Pipeline
+--
+-- Generates @.woodpecker.yml@ tailored for Forgejo or Codeberg runners.
+-- Executes Tagref, Markdown linkcheck, and CLOC audit inside @debian:bookworm-slim@.
+--
+-- See Note [Forge-Tiered CI Resource Allocation and Static Gate Partitioning]
+-- [ref:note-forge-tiered-ci].
+woodpeckerCiTemplate :: Project -> Text
+woodpeckerCiTemplate = generateWoodpeckerWorkflow defaultWoodpeckerSpec
 
 --------------------------------------------------------------------------------
 -- 3. Modular Agent Advisory Rules (Dimension 9)

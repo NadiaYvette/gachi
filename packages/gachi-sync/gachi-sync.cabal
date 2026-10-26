@@ -21,6 +21,7 @@ library
     Gachi.Sync
     Gachi.Sync.Audit
     Gachi.Sync.Catalog
+    Gachi.Sync.CI
     Gachi.Sync.Engine
     Gachi.Sync.Hash
     Gachi.Sync.Matrix
