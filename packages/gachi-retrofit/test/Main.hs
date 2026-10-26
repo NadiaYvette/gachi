@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -10,6 +11,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import System.Directory
   ( createDirectoryIfMissing
+  , doesDirectoryExist
   , doesFileExist
   , getCurrentDirectory
   , removeDirectoryRecursive
@@ -18,6 +20,7 @@ import System.FilePath (takeDirectory, (</>))
 import Test.Hspec
 
 import Gachi.Retrofit
+import Gachi.Schema.Project (Author(..), defaultProject)
 
 main :: IO ()
 main = hspec $ do
@@ -243,6 +246,101 @@ main = hspec $ do
       hasVerifyScript (diagVerificationHarness report) `shouldBe` True
       diagRetrofitScore report `shouldSatisfy` (>= 90.0)
 
+  describe "Gachi.Retrofit.Overlay (Non-Destructive Skeleton Overlay)" $ do
+    it "synthesizes complete candidate overlay assets across all 6 categories" $ do
+      let proj = defaultProject "sample" (Author "Test Author" "author@example.com")
+          candidates = synthesizeOverlayCandidates proj LayoutSinglePackage
+      length candidates `shouldSatisfy` (>= 25)
+      let paths = map actionPath candidates
+      all (`elem` paths) ["docs/INDEX.md", "docs/notes/DOC_STRATEGY.md", "PLAN.md", "STATE.md"] `shouldBe` True
+      all (`elem` paths) ["AGENTS.md", "CLAUDE.md", ".agents/rules/commit-attribution.md"] `shouldBe` True
+      all (`elem` paths) [".githooks/commit-msg", ".githooks/pre-commit", ".gitmessage"] `shouldBe` True
+      all (`elem` paths) ["bin/sample-verify", "bin/sample-tagref", "bin/sample-linkcheck", "bin/sample-cloc"] `shouldBe` True
+      all (`elem` paths) [".hlint.yaml", "fourmolu.yaml"] `shouldBe` True
+
+    it "computes overlay plan preserving existing files and proposing missing assets" $ do
+      let tmpDir = "/tmp/gachi-test-overlay-plan"
+      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
+      createDirectoryIfMissing True (tmpDir </> "src")
+      TIO.writeFile (tmpDir </> "README.md") "# Existing README\n"
+      TIO.writeFile (tmpDir </> "src" </> "Main.hs") "module Main where\nmain = putStrLn \"hello\"\n"
+
+      report <- scanRepository tmpDir
+      plan <- computeOverlayPlan tmpDir report
+
+      planCreatedCount plan `shouldSatisfy` (> 0)
+      planPreservedCount plan `shouldSatisfy` (>= 1)
+
+      let readmeAction = filter (\a -> actionPath a == "README.md") (planActions plan)
+      case readmeAction of
+        (act:_) -> actionType act `shouldBe` ActionPreserve
+        []      -> expectationFailure "Expected README.md to be present in overlay actions"
+
+      -- Verify Git governance proposal
+      any (\case GitInitRepo -> True; _ -> False) (planGitActions plan) `shouldBe` True
+      any (\case GitSetConfig k _ -> k == "core.hooksPath"; _ -> False) (planGitActions plan) `shouldBe` True
+
+      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
+
+    it "executes non-destructive overlay, creates harnesses, configures git, and guarantees idempotency" $ do
+      let tmpDir = "/tmp/gachi-test-overlay-exec"
+      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
+      createDirectoryIfMissing True (tmpDir </> "src")
+      let origDomainCode = "module Domain where\nsecret = 1337\n"
+      TIO.writeFile (tmpDir </> "src" </> "Domain.hs") origDomainCode
+      TIO.writeFile (tmpDir </> "README.md") "# Original Title\n"
+
+      report <- scanRepository tmpDir
+      plan <- computeOverlayPlan tmpDir report
+      res <- executeOverlayPlan plan
+
+      resultSuccess res `shouldBe` True
+      all (`elem` resultCreatedFiles res) ["docs/INDEX.md", "AGENTS.md", ".githooks/commit-msg"] `shouldBe` True
+      "README.md" `elem` resultPreservedFiles res `shouldBe` True
+
+      -- Invariant 1: Domain source code must remain 100% byte-identical
+      domainCodeAfter <- TIO.readFile (tmpDir </> "src" </> "Domain.hs")
+      domainCodeAfter `shouldBe` origDomainCode
+
+      -- Invariant 2: Existing README.md preserved intact
+      readmeAfter <- TIO.readFile (tmpDir </> "README.md")
+      readmeAfter `shouldBe` "# Original Title\n"
+
+      -- Invariant 3: Verification harnesses created with executable permissions
+      doesFileExist (tmpDir </> "bin" </> (T.unpack (diagProjectName report) ++ "-verify")) `shouldReturn` True
+      doesFileExist (tmpDir </> ".githooks" </> "commit-msg") `shouldReturn` True
+
+      -- Invariant 4: Git repository initialized and configured
+      doesDirectoryExist (tmpDir </> ".git") `shouldReturn` True
+
+      -- Invariant 5: Idempotency guarantee: Re-planning over retrofitted directory plans 0 creations for those assets
+      report2 <- scanRepository tmpDir
+      plan2 <- computeOverlayPlan tmpDir report2
+      planCreatedCount plan2 `shouldBe` 0
+
+      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
+
+    it "formats overlay plan and results into human-readable ASCII and Markdown dashboards" $ do
+      let tmpDir = "/tmp/gachi-test-overlay-fmt"
+      createDirectoryIfMissing True tmpDir
+      report <- scanRepository tmpDir
+      plan <- computeOverlayPlan tmpDir report
+
+      let asciiPlan = formatOverlayPlan plan
+      "Gachi Non-Destructive Skeleton Overlay Plan" `T.isInfixOf` asciiPlan `shouldBe` True
+      "Proposed Actions:" `T.isInfixOf` asciiPlan `shouldBe` True
+
+      let mdPlan = formatOverlayPlanMarkdown plan
+      "# Non-Destructive Skeleton Overlay Plan:" `T.isInfixOf` mdPlan `shouldBe` True
+      "| Status | File Path | Executable |" `T.isInfixOf` mdPlan `shouldBe` True
+
+      res <- executeOverlayPlan plan
+      let asciiRes = formatOverlayResult res
+      "Gachi Non-Destructive Overlay Execution Results" `T.isInfixOf` asciiRes `shouldBe` True
+      "Overlay successfully applied!" `T.isInfixOf` asciiRes `shouldBe` True
+
+      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
+
 findRepoRoot :: FilePath -> IO FilePath
 findRepoRoot dir = do
   hasProj <- doesFileExist (dir </> "cabal.project")
@@ -253,3 +351,4 @@ findRepoRoot dir = do
       if parent == dir
         then pure dir
         else findRepoRoot parent
+

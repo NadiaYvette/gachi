@@ -26,6 +26,8 @@ import System.Directory
   ( createDirectoryIfMissing
   , doesDirectoryExist
   , doesFileExist
+  , executable
+  , getPermissions
   , getTemporaryDirectory
   , removeDirectoryRecursive
   )
@@ -526,3 +528,36 @@ main = hspec $ do
             }
       mdCode <- runRetrofit mdOpts
       mdCode `shouldBe` ExitSuccess
+
+    it "applies non-destructive skeleton overlay to an uninitialized legacy checkout" $ withTempDir "gachi-cli-retrofit-live" $ \baseDir -> do
+      let targetDir = baseDir </> "legacy-app"
+      createDirectoryIfMissing True (targetDir </> "src")
+      let origCode = "module Lib (greet) where\ngreet :: String -> String\ngreet name = \"Hello, \" ++ name\n"
+      TIO.writeFile (targetDir </> "src" </> "Lib.hs") origCode
+      TIO.writeFile (targetDir </> "legacy-app.cabal") "cabal-version: 3.0\nname: legacy-app\nversion: 0.1.0.0\n"
+
+      let retroOpts = RetrofitOptions
+            { retrofitTargetDir = Just targetDir
+            , retrofitDryRun    = False
+            , retrofitMarkdown  = False
+            }
+      retroCode <- runRetrofit retroOpts
+      retroCode `shouldBe` ExitSuccess
+
+      -- Invariant 1: Verification runner materialized with executable permissions
+      let verifyScript = targetDir </> "bin" </> "legacy-app-verify"
+      doesFileExist verifyScript `shouldReturn` True
+      p <- getPermissions verifyScript
+      executable p `shouldBe` True
+
+      -- Invariant 2: Standard documentation hierarchy and agent advisories installed
+      doesFileExist (targetDir </> "docs" </> "INDEX.md") `shouldReturn` True
+      doesFileExist (targetDir </> "AGENTS.md") `shouldReturn` True
+      doesFileExist (targetDir </> ".githooks" </> "commit-msg") `shouldReturn` True
+
+      -- Invariant 3: Git repository initialized
+      doesDirectoryExist (targetDir </> ".git") `shouldReturn` True
+
+      -- Invariant 4: Domain source files preserved completely untouched
+      codeAfter <- TIO.readFile (targetDir </> "src" </> "Lib.hs")
+      codeAfter `shouldBe` origCode

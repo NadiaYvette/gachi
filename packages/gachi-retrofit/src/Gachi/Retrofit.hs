@@ -142,6 +142,23 @@ module Gachi.Retrofit
   , scoreClassification
   , padRight
 
+    -- * Re-exports from Gachi.Retrofit.Overlay
+  , OverlayActionType(..)
+  , OverlayCategory(..)
+  , OverlayAction(..)
+  , GitGovernanceAction(..)
+  , OverlayPlan(..)
+  , OverlayResult(..)
+  , computeOverlayPlan
+  , synthesizeOverlayCandidates
+  , detectGitAuthor
+  , executeOverlayPlan
+  , overlayRepository
+  , formatOverlayPlan
+  , formatOverlayPlanMarkdown
+  , formatOverlayResult
+  , overlayCategoryName
+
     -- * Re-exports from Gachi.Retrofit.Types
   , Language(..)
   , LanguageStats(..)
@@ -165,5 +182,6 @@ module Gachi.Retrofit
   ) where
 
 import Gachi.Retrofit.Diagnostic
+import Gachi.Retrofit.Overlay
 import Gachi.Retrofit.Report
 import Gachi.Retrofit.Types

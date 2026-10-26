@@ -107,8 +107,13 @@
   - Grounded `Note [Non-Destructive Skeleton Overlay]` with `[ref:note-nondestructive-retrofit]`.
   - Verified 12/12 passing Hspec tests in `packages/gachi-retrofit/test/Main.hs` and 23/23 in `packages/gachi-cli/test/Main.hs` (132/132 total tests across 6 workspace packages).
   - Passed all 5 physical verification gates in `./bin/gachi-verify` with 0 HLint hints, 0 broken links, 19 tags / 158 references, and 48.1% production source comment density.
-- [ ] **Milestone 4.2:** Non-Destructive Skeleton Overlay
-  - Safely scaffolds missing documentation hierarchies, hooks, and verification harnesses without perturbing existing domain logic.
+- [x] **Milestone 4.2:** Non-Destructive Skeleton Overlay
+  - Grounded non-destructive skeleton overlay engine `packages/gachi-retrofit/src/Gachi/Retrofit/Overlay.hs` synthesizing missing documentation hierarchies (`docs/INDEX.md`, `docs/notes/DOC_STRATEGY.md`, `docs/notes/COMMIT_ATTRIBUTION.md`, `docs/MAINTAINER_GUIDE.md`), AI agent advisories (`AGENTS.md`, `CLAUDE.md`, `.agents/rules/`), Git governance hooks (`.githooks/commit-msg`, `.githooks/pre-commit`, `.gitmessage`), turnkey physical verification runners (`bin/*-verify`, `bin/*-tagref`, `bin/*-linkcheck`, `bin/*-cloc`), and toolchain configurations (`.hlint.yaml`, `fourmolu.yaml`).
+  - Implemented pure candidate synthesis (`synthesizeOverlayCandidates`), differential plan construction (`computeOverlayPlan`), and idempotent filesystem materialization (`executeOverlayPlan`).
+  - Enforced and verified core invariant Note [Non-Destructive Skeleton Overlay] (`[ref:note-nondestructive-retrofit]`): existing domain logic source files (`src/`, `app/`, `lib/`, `test/`) and pre-existing files are strictly classified as `ActionPreserve` and left 100% byte-identical.
+  - Implemented turnkey CLI integration `gachi retrofit [--target DIR] [--dry-run] [--markdown]` displaying rich 80-column boxed terminal dashboard and GFM Markdown plan previews.
+  - Verified 16/16 passing tests in `packages/gachi-retrofit/test/Main.hs` and 24/24 in `packages/gachi-cli/test/Main.hs` (137/137 total tests across 6 packages).
+  - Passed all 5 physical verification gates in `./bin/gachi-verify` with 0 HLint hints, 0 broken links, 19 tags / 166 references, and 48.4% production comment density.
 - [ ] **Milestone 4.3:** Progressive Quality Gate Realization
   - Incremental remediation pipelines: bringing builds under `-Wall -Werror`, purging HLint warnings, and grounding physical verification gates.
 
