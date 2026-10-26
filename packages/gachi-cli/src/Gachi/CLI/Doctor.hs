@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -54,8 +55,9 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import System.Directory (doesDirectoryExist, findExecutable)
+import System.Directory (doesDirectoryExist, doesFileExist, findExecutable, getHomeDirectory)
 import System.Exit (ExitCode(..))
+import System.FilePath ((</>))
 import System.Process (readProcessWithExitCode)
 
 import Gachi.CLI.Options (DoctorOptions(..))
@@ -169,14 +171,22 @@ checkToolchainHealth = do
     checkPresent (Just _) = True
     checkPresent Nothing  = False
 
--- | Inspects an external binary on @PATH@, executing arguments and returning stdout.
+-- | Inspects an external binary on @PATH@ or fallback paths, executing arguments and returning stdout.
 checkBinaryVersion :: String -> [String] -> IO (Maybe Text)
 checkBinaryVersion bin args = do
-  mbExec <- findExecutable bin
+  mbExec <- findExecutable bin >>= \case
+    Just p  -> pure (Just p)
+    Nothing -> do
+      home <- getHomeDirectory
+      let candidates =
+            [ home </> ".local" </> "bin" </> bin
+            , home </> ".ghcup" </> "bin" </> bin
+            ]
+      findExisting candidates
   case mbExec of
     Nothing -> pure Nothing
-    Just _  -> do
-      (code, out, _) <- readProcessWithExitCode bin args "" `catch` (\(_ :: SomeException) -> pure (ExitFailure 1, "", ""))
+    Just execPath -> do
+      (code, out, _) <- readProcessWithExitCode execPath args "" `catch` (\(_ :: SomeException) -> pure (ExitFailure 1, "", ""))
       case code of
         ExitSuccess ->
           let firstLine = case T.lines (T.strip (T.pack out)) of
@@ -184,6 +194,11 @@ checkBinaryVersion bin args = do
                 []    -> ""
           in pure (if T.null firstLine then Nothing else Just firstLine)
         ExitFailure _ -> pure Nothing
+  where
+    findExisting [] = pure Nothing
+    findExisting (c:cs) = do
+      exists <- doesFileExist c
+      if exists then pure (Just c) else findExisting cs
 
 -- | Formats toolchain audit results as an aligned ASCII diagnostic table.
 formatToolchainStatus :: [ToolStatus] -> Text

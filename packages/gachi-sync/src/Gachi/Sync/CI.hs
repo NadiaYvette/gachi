@@ -589,9 +589,15 @@ generateGitHubWorkflow spec proj =
     , "          ghc-version: '" <> ghcVer <> "'"
     , "          cabal-version: '" <> cabalVer <> "'"
     , ""
-      -- Step 8: Install recommended HLint binary via GHCup
+      -- Step 8: Install HLint binary
     , "      - name: Install HLint"
-    , "        run: ghcup install hlint recommended --set || true"
+    , "        run: |"
+    , "          mkdir -p \"${HOME}/.local/bin\""
+    , "          if ! command -v hlint >/dev/null 2>&1; then"
+    , "            curl -sSL https://github.com/ndmitchell/hlint/releases/download/v3.10/hlint-3.10-x86_64-linux.tar.gz | tar -xz -C \"${HOME}/.local\""
+    , "            ln -sf \"${HOME}/.local/hlint-3.10/hlint\" \"${HOME}/.local/bin/hlint\""
+    , "          fi"
+    , "          echo \"${HOME}/.local/bin\" >> $GITHUB_PATH"
     , ""
       -- Step 9: Restore and save Cabal store caches keyed by project manifests
     , "      - name: Cache Cabal artifacts"

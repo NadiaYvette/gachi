@@ -10,6 +10,8 @@ verify_hlint() {
   local hlint_cmd=""
   if [[ -x "${HOME}/.ghcup/bin/hlint" ]]; then
     hlint_cmd="${HOME}/.ghcup/bin/hlint"
+  elif [[ -x "${HOME}/.local/bin/hlint" ]]; then
+    hlint_cmd="${HOME}/.local/bin/hlint"
   elif command -v hlint >/dev/null 2>&1; then
     hlint_cmd="$(command -v hlint)"
   fi
@@ -24,7 +26,7 @@ verify_hlint() {
 
 verify_tests() {
   echo "=== [2/5] Full Cabal Test Suite ==="
-  (cd "${REPO_ROOT}" && cabal test gachi-core gachi-schema gachi-scaffold gachi-cli gachi-sync >/dev/null)
+  (cd "${REPO_ROOT}" && cabal test gachi-core gachi-schema gachi-scaffold gachi-cli gachi-sync --test-show-details=streaming)
   echo "  [+] All test suite assertions PASSED."
 }
 
