@@ -11,6 +11,11 @@ Per Note [Non-Destructive Skeleton Overlay] [ref:note-nondestructive-retrofit], 
 
 1. **Milestone 4.1: Diagnostic Repository Inspector:** Conducts rigorous, read-only static analysis across six dimensions (languages, build manifests, test suites, documentation gaps, Git governance, verification gates) and computes quantitative readiness scores.
 2. **Milestone 4.2: Non-Destructive Skeleton Overlay:** Computes an explicit `OverlayPlan` categorizing missing standardized assets as `ActionCreate` and pre-existing files as `ActionPreserve`. In live mode, materializes missing documentation, agent rules, Git hooks, and verification runners (`bin/*-verify`) with executable bits, and configures Git governance without touching domain code.
+3. **Milestone 4.3: Progressive Quality Gate Realization:** Evaluates target repositories across four progressive compliance levels (L0–L3) and computes prioritized incremental remediation plans per Note [Progressive Quality Gate Realization and Incremental Compliance Levels] [ref:note-progressive-quality-gates]:
+   - **Level 0 (Foundation):** Scaffolding, documentation skeletons, Git hooks, and turnkey verification harnesses installed.
+   - **Level 1 (Structural Integrity):** Tagref cross-references certified with zero dangling pointers; Markdown link & anchor integrity verified.
+   - **Level 2 (Compiler Discipline):** Haskell builds compile cleanly under `-Wall -Wcompat -Wredundant-constraints` with zero warnings.
+   - **Level 3 (Static Analysis Purity):** HLint reports zero hints under `.hlint.yaml`; in-code comment density satisfies the 25.0% threshold (50.0%+ target on `src/`); full test suites pass cleanly.
 
 ```
 Arbitrary Target Workspace
@@ -31,6 +36,14 @@ Arbitrary Target Workspace
         ├─► [ActionPreserve]       ──► Existing domain code (src/, app/, lib/) left 100% untouched
         ├─► [ActionCreate]         ──► Missing docs, .agents/rules, .githooks, and bin/*-verify
         └─► [GitGovernanceAction]  ──► core.hooksPath = .githooks, commit.template = .gitmessage
+        │
+        ▼
+  Progressive Quality Gate Realization (Milestone 4.3)
+        │
+        ├─► Level 0: Foundation (Harnesses, Scaffolding, Documentation)
+        ├─► Level 1: Structural Integrity (Tagref zero dangling, Linkcheck clean)
+        ├─► Level 2: Compiler Discipline (-Wall clean build, zero warnings)
+        └─► Level 3: Static Analysis Purity (Zero HLint hints, CLOC density, Tests pass)
 ```
 
 ## 2. Six Diagnostic Dimensions & Overlay Categories
@@ -49,6 +62,7 @@ The diagnostic and overlay pipeline covers six orthogonal dimensions:
 - `Gachi.Retrofit.Types`: Comprehensive algebraic data models representing diagnostic findings, language statistics, build systems, test suites, documentation gaps, and report structures.
 - `Gachi.Retrofit.Diagnostic`: Pure classification combinators, filesystem exploration routines, heuristic scoring, and remediation plan calculation.
 - `Gachi.Retrofit.Overlay`: Non-destructive skeleton overlay engine, candidate asset synthesis, plan computation (`computeOverlayPlan`), and materialization (`executeOverlayPlan`).
+- `Gachi.Retrofit.QualityGate`: Progressive quality gate evaluation engine, 4-level monotonic compliance tracker (L0–L3), and prioritized remediation planner.
 - `Gachi.Retrofit.Report`: Rich terminal dashboard pretty-printing (aligned ASCII tables, progress bars) and GFM Markdown serialization.
 - `Gachi.Retrofit`: Root facade re-exporting the complete public API.
 
@@ -69,4 +83,8 @@ main = do
   -- Execute non-destructive overlay (materializes missing assets, preserves domain code)
   res <- executeOverlayPlan plan
   putStrLn (formatOverlayResult res)
+
+  -- Evaluate progressive quality gates (L0–L3) and inspect compliance report
+  qgReport <- evaluateQualityGates "/path/to/legacy-repo"
+  putStrLn (formatQualityGateReport qgReport)
 ```

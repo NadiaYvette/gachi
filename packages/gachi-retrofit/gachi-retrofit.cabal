@@ -21,6 +21,7 @@ library
     Gachi.Retrofit
     Gachi.Retrofit.Diagnostic
     Gachi.Retrofit.Overlay
+    Gachi.Retrofit.QualityGate
     Gachi.Retrofit.Report
     Gachi.Retrofit.Types
   hs-source-dirs: src

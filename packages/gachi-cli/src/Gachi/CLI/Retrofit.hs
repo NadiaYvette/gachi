@@ -72,12 +72,15 @@ import Gachi.CLI.Options (RetrofitOptions(..))
 import Gachi.Retrofit
   ( OverlayResult(..)
   , computeOverlayPlan
+  , evaluateQualityGates
   , executeOverlayPlan
   , formatDiagnosticMarkdown
   , formatDiagnosticReport
   , formatOverlayPlan
   , formatOverlayPlanMarkdown
   , formatOverlayResult
+  , formatQualityGateMarkdown
+  , formatQualityGateReport
   , scanRepository
   )
 
@@ -151,6 +154,12 @@ runInspectionAndOverlay targetDir isDryRun isMarkdown = do
           TIO.putStrLn ("- **Git Actions:** " <> T.pack (show (length (resultGitActions result))))
         else TIO.putStr (formatOverlayResult result)
       TIO.putStrLn "  [+] Milestone 4.2 Non-Destructive Skeleton Overlay applied successfully."
+
+  -- 4. Milestone 4.3 Progressive Quality Gate Evaluation
+  qgReport <- evaluateQualityGates targetDir
+  if isMarkdown
+    then TIO.putStr (formatQualityGateMarkdown qgReport)
+    else TIO.putStr (formatQualityGateReport qgReport)
 
   pure ExitSuccess
   where

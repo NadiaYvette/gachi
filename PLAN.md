@@ -114,8 +114,13 @@
   - Implemented turnkey CLI integration `gachi retrofit [--target DIR] [--dry-run] [--markdown]` displaying rich 80-column boxed terminal dashboard and GFM Markdown plan previews.
   - Verified 16/16 passing tests in `packages/gachi-retrofit/test/Main.hs` and 24/24 in `packages/gachi-cli/test/Main.hs` (137/137 total tests across 6 packages).
   - Passed all 5 physical verification gates in `./bin/gachi-verify` with 0 HLint hints, 0 broken links, 19 tags / 166 references, and 48.4% production comment density.
-- [ ] **Milestone 4.3:** Progressive Quality Gate Realization
-  - Incremental remediation pipelines: bringing builds under `-Wall -Werror`, purging HLint warnings, and grounding physical verification gates.
+- [x] **Milestone 4.3:** Progressive Quality Gate Realization
+  - Grounded progressive quality gate realization engine `packages/gachi-retrofit/src/Gachi/Retrofit/QualityGate.hs` evaluating target repositories across four progressive compliance levels: Level 0 (Foundation), Level 1 (Structural Integrity), Level 2 (Compiler Discipline), and Level 3 (Static Analysis Purity).
+  - Implemented monotonic progression invariant ($L0 \subset L1 \subset L2 \subset L3$) via `computeAchievedLevel`, prioritized remediation planning via `computeRemediationSteps`, 14 pure gate checks across 4 levels (`allLevelGates`), rich 80-column boxed terminal dashboard (`formatQualityGateReport`), and GFM Markdown serialization (`formatQualityGateMarkdown`).
+  - Grounded canonical Note [Progressive Quality Gate Realization and Incremental Compliance Levels] (`[ref:note-progressive-quality-gates]`).
+  - Integrated into unified `Gachi.Retrofit` library facade and turnkey `gachi retrofit` CLI workflow (`Gachi.CLI.Retrofit`).
+  - Added 5 new test specifications in `packages/gachi-retrofit/test/Main.hs` (21/21 passing) and CLI integration test in `packages/gachi-cli/test/Main.hs` (25/25 passing), bringing total suite to 143/143 tests across all 6 packages.
+  - Verified zero compiler warnings under `-Wall -Wcompat -Wredundant-constraints`, zero HLint hints, and passed all 5 physical verification gates in `./bin/gachi-verify` (20 tags / 174 references, 0 broken links, 47.4% comment density on `src/`).
 
 ---
 

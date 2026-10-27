@@ -14,7 +14,10 @@ import System.Directory
   , doesDirectoryExist
   , doesFileExist
   , getCurrentDirectory
+  , getPermissions
   , removeDirectoryRecursive
+  , setOwnerExecutable
+  , setPermissions
   )
 import System.FilePath (takeDirectory, (</>))
 import Test.Hspec
@@ -338,6 +341,127 @@ main = hspec $ do
       let asciiRes = formatOverlayResult res
       "Gachi Non-Destructive Overlay Execution Results" `T.isInfixOf` asciiRes `shouldBe` True
       "Overlay successfully applied!" `T.isInfixOf` asciiRes `shouldBe` True
+
+      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
+
+  describe "Gachi.Retrofit.QualityGate (Progressive Quality Gates)" $ do
+    it "constructs pure gate specifications across all four progressive levels (L0-L3)" $ do
+      length level0Gates `shouldBe` 8
+      length level1Gates `shouldBe` 2
+      length level2Gates `shouldBe` 1
+      length level3Gates `shouldBe` 3
+      length allLevelGates `shouldBe` 14
+      all (\g -> gateLevel g == QualityLevel0) level0Gates `shouldBe` True
+      all (\g -> gateLevel g == QualityLevel1) level1Gates `shouldBe` True
+      all (\g -> gateLevel g == QualityLevel2) level2Gates `shouldBe` True
+      all (\g -> gateLevel g == QualityLevel3) level3Gates `shouldBe` True
+
+    it "evaluates monotonic compliance progression via computeAchievedLevel" $ do
+      let mkRes gName lvl passed = GateResult (GateCheck gName lvl "desc" (\_ -> pure passed)) passed "detail"
+          allPass = [ mkRes "g0" QualityLevel0 True
+                    , mkRes "g1" QualityLevel1 True
+                    , mkRes "g2" QualityLevel2 True
+                    , mkRes "g3" QualityLevel3 True
+                    ]
+      computeAchievedLevel allPass `shouldBe` QualityLevel3
+
+      let failL3 = [ mkRes "g0" QualityLevel0 True
+                   , mkRes "g1" QualityLevel1 True
+                   , mkRes "g2" QualityLevel2 True
+                   , mkRes "g3" QualityLevel3 False
+                   ]
+      computeAchievedLevel failL3 `shouldBe` QualityLevel2
+
+      let failL2 = [ mkRes "g0" QualityLevel0 True
+                   , mkRes "g1" QualityLevel1 True
+                   , mkRes "g2" QualityLevel2 False
+                   , mkRes "g3" QualityLevel3 True
+                   ]
+      computeAchievedLevel failL2 `shouldBe` QualityLevel1
+
+      let failL1 = [ mkRes "g0" QualityLevel0 True
+                   , mkRes "g1" QualityLevel1 False
+                   , mkRes "g2" QualityLevel2 True
+                   , mkRes "g3" QualityLevel3 True
+                   ]
+      computeAchievedLevel failL1 `shouldBe` QualityLevel0
+
+      let failL0 = [ mkRes "g0" QualityLevel0 False
+                   , mkRes "g1" QualityLevel1 True
+                   , mkRes "g2" QualityLevel2 True
+                   , mkRes "g3" QualityLevel3 True
+                   ]
+      computeAchievedLevel failL0 `shouldBe` QualityLevel0
+
+    it "generates prioritized remediation steps ordered by progressive levels" $ do
+      let mkRes gName lvl passed = GateResult (GateCheck gName lvl "desc" (\_ -> pure passed)) passed "detail"
+          mixed = [ mkRes "Git Hooks Directory" QualityLevel0 False
+                  , mkRes "Tagref Cross-Reference" QualityLevel1 False
+                  , mkRes "Cabal Build Clean" QualityLevel2 False
+                  , mkRes "HLint Zero Hints" QualityLevel3 False
+                  ]
+          steps = computeRemediationSteps mixed
+      length steps `shouldBe` 4
+      map stepPriority steps `shouldBe` [PriorityFoundation, PriorityStructural, PriorityCompiler, PriorityAnalysis]
+      any (\s -> "gachi retrofit" `T.isInfixOf` stepCommand s) steps `shouldBe` True
+      any (\s -> "tagref" `T.isInfixOf` stepCommand s) steps `shouldBe` True
+      any (\s -> "cabal build" `T.isInfixOf` stepCommand s) steps `shouldBe` True
+      any (\s -> "hlint" `T.isInfixOf` stepCommand s) steps `shouldBe` True
+
+    it "formats terminal ASCII dashboard and GitHub-Flavored Markdown reports" $ do
+      let mkRes gName lvl passed = GateResult (GateCheck gName lvl "desc" (\_ -> pure passed)) passed "detail"
+          results = [ mkRes "Git Repo" QualityLevel0 True
+                    , mkRes "Hooks" QualityLevel0 False
+                    , mkRes "Tagref" QualityLevel1 True
+                    ]
+          report = QualityGateReport
+            { qgTargetDir        = "/tmp/sample-project"
+            , qgProjectName      = "sample-project"
+            , qgGateResults      = results
+            , qgAchievedLevel    = QualityLevel0
+            , qgMaxPossibleLevel = QualityLevel3
+            , qgPassedCount      = 2
+            , qgFailedCount      = 1
+            , qgRemediationSteps = computeRemediationSteps results
+            }
+          asciiOut = formatQualityGateReport report
+          mdOut    = formatQualityGateMarkdown report
+
+      "Gachi Progressive Quality Gate Report" `T.isInfixOf` asciiOut `shouldBe` True
+      "Target Directory:    /tmp/sample-project" `T.isInfixOf` asciiOut `shouldBe` True
+      "[Level 0: Foundation]" `T.isInfixOf` asciiOut `shouldBe` True
+      "Remediation Plan" `T.isInfixOf` asciiOut `shouldBe` True
+
+      "# Progressive Quality Gate Report: `sample-project`" `T.isInfixOf` mdOut `shouldBe` True
+      "| Status | Gate | Description |" `T.isInfixOf` mdOut `shouldBe` True
+      "## Level 0: Foundation" `T.isInfixOf` mdOut `shouldBe` True
+
+    it "evaluates quality gates against a live retrofitted workspace" $ do
+      let tmpDir = "/tmp/gachi-test-quality-gate-live"
+      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
+      createDirectoryIfMissing True (tmpDir </> "bin")
+      createDirectoryIfMissing True (tmpDir </> ".githooks")
+      createDirectoryIfMissing True (tmpDir </> ".git")
+      createDirectoryIfMissing True (tmpDir </> "src")
+
+      TIO.writeFile (tmpDir </> "README.md") "# Test Project\n"
+      TIO.writeFile (tmpDir </> "PLAN.md") "# Strategic Plan\n"
+      TIO.writeFile (tmpDir </> "tagref.yml") "archive: false\n"
+      TIO.writeFile (tmpDir </> ".hlint.yaml") "- ignore: {}\n"
+      TIO.writeFile (tmpDir </> ".gitmessage") "Subject\n"
+      TIO.writeFile (tmpDir </> ".githooks" </> "commit-msg") "#!/bin/sh\nexit 0\n"
+      TIO.writeFile (tmpDir </> ".githooks" </> "pre-commit") "#!/bin/sh\nexit 0\n"
+      TIO.writeFile (tmpDir </> "bin" </> "test-verify") "#!/bin/sh\nexit 0\n"
+      TIO.writeFile (tmpDir </> "src" </> "Main.hs") "module Main where\nmain = pure ()\n"
+
+      -- Make scripts executable
+      perms <- getPermissions (tmpDir </> "bin" </> "test-verify")
+      setPermissions (tmpDir </> "bin" </> "test-verify") (setOwnerExecutable True perms)
+
+      report <- evaluateQualityGates tmpDir
+      qgProjectName report `shouldSatisfy` (not . T.null)
+      qgPassedCount report `shouldSatisfy` (>= 8)
+      length (qgGateResults report) `shouldBe` 14
 
       removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
 

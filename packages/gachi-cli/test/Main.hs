@@ -561,3 +561,22 @@ main = hspec $ do
       -- Invariant 4: Domain source files preserved completely untouched
       codeAfter <- TIO.readFile (targetDir </> "src" </> "Lib.hs")
       codeAfter `shouldBe` origCode
+
+    it "evaluates progressive quality gates during retrofit execution" $ withTempDir "gachi-cli-retrofit-gates" $ \baseDir -> do
+      let targetDir = baseDir </> "quality-app"
+      createDirectoryIfMissing True (targetDir </> "src")
+      TIO.writeFile (targetDir </> "src" </> "Main.hs") "module Main where\nmain = pure ()\n"
+      TIO.writeFile (targetDir </> "quality-app.cabal") "cabal-version: 3.0\nname: quality-app\nversion: 0.1.0.0\n"
+
+      let retroOpts = RetrofitOptions
+            { retrofitTargetDir = Just targetDir
+            , retrofitDryRun    = False
+            , retrofitMarkdown  = False
+            }
+      retroCode <- runRetrofit retroOpts
+      retroCode `shouldBe` ExitSuccess
+
+      -- Verify that overlay was applied and quality gates evaluated cleanly
+      doesFileExist (targetDir </> "bin" </> "quality-app-verify") `shouldReturn` True
+      doesFileExist (targetDir </> "PLAN.md") `shouldReturn` True
+      doesFileExist (targetDir </> "tagref.yml") `shouldReturn` True

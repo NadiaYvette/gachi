@@ -179,9 +179,32 @@ module Gachi.Retrofit
   , GitGovernanceStatus(..)
   , VerificationHarnessStatus(..)
   , DiagnosticReport(..)
+
+    -- * Re-exports from Gachi.Retrofit.QualityGate (Milestone 4.3)
+  , QualityLevel(..)
+  , qualityLevelName
+  , qualityLevelOrdinal
+  , GateCheck(..)
+  , GateResult(..)
+  , QualityGateReport(..)
+  , RemediationStep(..)
+  , RemediationPriority(..)
+  , remediationPriorityName
+  , level0Gates
+  , level1Gates
+  , level2Gates
+  , level3Gates
+  , allLevelGates
+  , evaluateQualityGates
+  , evaluateGateCheck
+  , computeAchievedLevel
+  , computeRemediationSteps
+  , formatQualityGateReport
+  , formatQualityGateMarkdown
   ) where
 
 import Gachi.Retrofit.Diagnostic
 import Gachi.Retrofit.Overlay
+import Gachi.Retrofit.QualityGate
 import Gachi.Retrofit.Report
 import Gachi.Retrofit.Types
