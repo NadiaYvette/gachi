@@ -13,14 +13,21 @@
 -- [ref:note-plan-governance-rollback], planning files across @~/src/@ are
 -- tracked in an isolated detached Git repository without interfering with
 -- child repository checkouts. This module formalizes the data models representing
--- the detached store configuration, execution errors, status queries, and
--- governed document invariants.
+-- the detached store configuration, execution errors, status queries, snapshot
+-- ledger metadata, and governed document invariants.
+--
+-- See also Note [Append-Only Plan Snapshot Invariants] [ref:note-plan-snapshots].
 module Gachi.Plan.Types
   ( -- * Store Configuration
     PlanStore(..)
   , defaultGovernedFiles
   , defaultStoreName
   , planGitDirEnvVar
+
+    -- * Snapshot Ledger Configuration & Metadata
+  , SnapshotMeta(..)
+  , planSnapshotDirEnvVar
+  , defaultSnapshotDirName
 
     -- * Store Status & Metadata
   , PlanStoreStatus(..)
@@ -72,6 +79,35 @@ defaultStoreName = ".plan.git"
 -- | Standard environment variable name for overriding the detached Git store path.
 planGitDirEnvVar :: String
 planGitDirEnvVar = "PLAN_GIT_DIR"
+
+-- | Standard environment variable name for overriding the snapshot ledger directory.
+planSnapshotDirEnvVar :: String
+planSnapshotDirEnvVar = "PLAN_SNAPSHOT_DIR"
+
+-- | Default snapshot ledger directory relative to workspace root or home directory.
+defaultSnapshotDirName :: FilePath
+defaultSnapshotDirName = "plans/snapshots"
+
+-- | Metadata record describing an immutable snapshot within the snapshot ledger.
+--
+-- In accordance with Note [Append-Only Plan Snapshot Invariants] [ref:note-plan-snapshots],
+-- each snapshot preserves a byte-for-byte replica of a governed planning document
+-- prior to mutation or at an explicit milestone checkpoint.
+data SnapshotMeta = SnapshotMeta
+  { snapshotId           :: !Text
+    -- ^ Unique snapshot identifier (typically matching the snapshot file name).
+  , snapshotPath         :: !FilePath
+    -- ^ Absolute filesystem path to the immutable snapshot file.
+  , snapshotTimestamp    :: !UTCTime
+    -- ^ Timestamp when the snapshot was recorded in UTC.
+  , snapshotSha256       :: !Text
+    -- ^ Cryptographic SHA-256 digest of the snapshot file contents.
+  , snapshotSourceFile   :: !FilePath
+    -- ^ Original governed file name or relative path that was snapshotted (e.g. @"PLAN.md"@).
+  , snapshotIsCheckpoint :: !Bool
+    -- ^ Whether this snapshot marks an immutable milestone checkpoint exempt from automated pruning.
+  }
+  deriving stock (Eq, Show, Generic)
 
 -- | Observed runtime status, commit metadata, and dirty state of a detached Git plan store.
 --

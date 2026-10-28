@@ -54,7 +54,7 @@ module Gachi.Plan.Store
 
 import Control.Exception (SomeException, catch)
 import Control.Monad (filterM)
-import Data.Maybe (catMaybes)
+import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -223,7 +223,7 @@ queryPlanStore store = do
         | length lineStr > 3 = Just (drop 3 lineStr)
         | otherwise          = Nothing
 
-      dirtyPaths = catMaybes (map extractDirtyPath porcelainLines)
+      dirtyPaths = mapMaybe extractDirtyPath porcelainLines
       dirtyFlag = not (null dirtyPaths)
 
   pure PlanStoreStatus
