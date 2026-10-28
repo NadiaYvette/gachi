@@ -7,12 +7,14 @@ module Main (main) where
 
 import Control.Concurrent (forkIO, newEmptyMVar, putMVar, readMVar, takeMVar)
 import Control.Monad (forM_, replicateM)
+import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum(..))
 import Data.Text (Text)
 import Data.Word (Word64, Word8)
 import Test.Hspec
 
 import Gachi.Core
+import Gachi.Core.Rewriting
 import Gachi.Core.Traversal
 import Gachi.Osteology
 
@@ -578,3 +580,247 @@ main = hspec do
       workerResults <- replicateM numWorkers (takeMVar workerDone)
       let failures = [ err | Left err <- workerResults ]
       failures `shouldBe` []
+
+  -- Tested against Note [Double-Pushout Algebraic Graph Rewriting] [ref:note-dpo-graph-rewriting]
+  describe "Gachi.Core.Rewriting Double-Pushout (DPO) Engine" do
+    it "replaces a chain of two bones with a single bridged bone while preserving unaffected topology" do
+      -- 1. Construct host graph G:
+      -- b0 ("root") -> b1 ("femur") -> b2 ("tibia") -> b3 ("foot")
+      -- With unaffected topology:
+      -- j3: b0 ("root") -> b3 ("foot") (bypass edge)
+      -- j4: b0 ("root") -> b4 ("tail") (side branch)
+      let (b0, g0) = insertBone ("root" :: Text) emptySkeleton
+          (b1, g1) = insertBone "femur" g0
+          (b2, g2) = insertBone "tibia" g1
+          (b3, g3) = insertBone "foot" g2
+          (b4, g4) = insertBone "tail" g3
+          (_j0, g5) = connectJoint b0 b1 g4
+          (_j1, g6) = connectJoint b1 b2 g5
+          (_j2, g7) = connectJoint b2 b3 g6
+          (_j3, g8) = connectJoint b0 b3 g7
+          (_j4, host) = connectJoint b0 b4 g8
+
+      totalBones host `shouldBe` 5
+      totalJoints host `shouldBe` 5
+
+      -- 2. Construct DPO production rule:
+      -- L: l0 ("root") -> l1 ("femur") -> l2 ("tibia") -> l3 ("foot")
+      let (l0, lS0) = insertBone ("root" :: Text) emptySkeleton
+          (l1, lS1) = insertBone "femur" lS0
+          (l2, lS2) = insertBone "tibia" lS1
+          (l3, lS3) = insertBone "foot" lS2
+          (jl0, lS4) = connectJoint l0 l1 lS3
+          (jl1, lS5) = connectJoint l1 l2 lS4
+          (jl2, ruleL) = connectJoint l2 l3 lS5
+
+      -- K: k0 ("root"), k1 ("foot") (interface bones preserved)
+      let (k0, kS0) = insertBone ("root" :: Text) emptySkeleton
+          (k1, ruleK) = insertBone "foot" kS0
+
+      -- R: r0 ("root"), r1 ("foot"), r2 ("bridged_leg")
+      -- r0 -> r2 -> r1
+      let (r0, rS0) = insertBone ("root" :: Text) emptySkeleton
+          (r1, rS1) = insertBone "foot" rS0
+          (r2, rS2) = insertBone "bridged_leg" rS1
+          (_jr0, rS3) = connectJoint r0 r2 rS2
+          (_jr1, ruleR) = connectJoint r2 r1 rS3
+
+      let morphL =
+            ( Map.empty
+            , Map.fromList [(k0, l0), (k1, l3)]
+            )
+          morphR =
+            ( Map.empty
+            , Map.fromList [(k0, r0), (k1, r1)]
+            )
+          rule = ProductionRule
+            { ruleName      = "bridge-two-bone-chain"
+            , ruleLeft      = ruleL
+            , ruleInterface = ruleK
+            , ruleRight     = ruleR
+            , morphismL     = morphL
+            , morphismR     = morphR
+            }
+
+      -- Find matches in host
+      let matches = findMatches rule host
+      length matches `shouldBe` 1
+
+      case matches of
+        [] -> expectationFailure "Expected at least 1 match"
+        (m : _) -> do
+          -- Verify match structure
+          Map.lookup jl0 (matchJoints m) `shouldBe` Just (JointId 0)
+          Map.lookup jl1 (matchJoints m) `shouldBe` Just (JointId 1)
+          Map.lookup jl2 (matchJoints m) `shouldBe` Just (JointId 2)
+
+          -- Derive pushout complement D (context graph)
+          case derivePushoutComplement rule m host of
+            Left err -> expectationFailure ("Pushout complement failed: " ++ show err)
+            Right d -> do
+              -- In D: femur and tibia deleted; root, foot, tail retained
+              totalBones d `shouldBe` 3
+              allBones d `shouldBe` ["root", "foot", "tail"]
+              -- Unaffected edges j3 (root -> foot) and j4 (root -> tail) are preserved
+              totalJoints d `shouldBe` 2
+              lookupJoint (JointId 0) d `shouldBe` Just (Joint (JointId 0) (BoneId 0) (BoneId 1))
+              lookupJoint (JointId 1) d `shouldBe` Just (Joint (JointId 1) (BoneId 0) (BoneId 2))
+
+              -- Construct second pushout H
+              case constructPushout rule m d of
+                Left err -> expectationFailure ("Construct pushout failed: " ++ show err)
+                Right h -> do
+                  totalBones h `shouldBe` 4
+                  allBones h `shouldBe` ["root", "foot", "tail", "bridged_leg"]
+                  totalJoints h `shouldBe` 4
+                  -- Unaffected adjacent topology preserved:
+                  lookupBone (BoneId 0) h `shouldBe` Just "root"
+                  lookupBone (BoneId 1) h `shouldBe` Just "foot"
+                  lookupBone (BoneId 2) h `shouldBe` Just "tail"
+                  lookupBone (BoneId 3) h `shouldBe` Just "bridged_leg"
+                  -- Connects: root->foot (j0), root->tail (j1), root->bridge (j2), bridge->foot (j3)
+                  lookupJoint (JointId 0) h `shouldBe` Just (Joint (JointId 0) (BoneId 0) (BoneId 1))
+                  lookupJoint (JointId 1) h `shouldBe` Just (Joint (JointId 1) (BoneId 0) (BoneId 2))
+                  lookupJoint (JointId 2) h `shouldBe` Just (Joint (JointId 2) (BoneId 0) (BoneId 3))
+                  lookupJoint (JointId 3) h `shouldBe` Just (Joint (JointId 3) (BoneId 3) (BoneId 1))
+
+          -- End-to-end applyRule yields identical result
+          case applyRule rule m host of
+            Left err -> expectationFailure ("applyRule failed: " ++ show err)
+            Right h  -> do
+              totalBones h `shouldBe` 4
+              totalJoints h `shouldBe` 4
+              allBones h `shouldBe` ["root", "foot", "tail", "bridged_leg"]
+
+    it "rejects rule application when external incident edges violate dangling condition" do
+      -- Host graph: femur -> tibia -> fibula
+      -- Joint 0: femur -> tibia
+      -- Joint 1: tibia -> fibula
+      let (b0, g0) = insertBone ("femur" :: Text) emptySkeleton
+          (b1, g1) = insertBone "tibia" g0
+          (b2, g2) = insertBone "fibula" g1
+          (_j0, g3) = connectJoint b0 b1 g2
+          (_j1, host) = connectJoint b1 b2 g3
+
+      -- Rule attempting to delete tibia (and joint 0) without matching joint 1
+      -- L: femur -> tibia
+      let (l0, lS0) = insertBone ("femur" :: Text) emptySkeleton
+          (l1, lS1) = insertBone "tibia" lS0
+          (_jl0, ruleL) = connectJoint l0 l1 lS1
+
+      -- K: only femur preserved; tibia is in L \ K (scheduled for deletion)
+      let (k0, ruleK) = insertBone ("femur" :: Text) emptySkeleton
+
+      -- R: only femur
+      let (r0, ruleR) = insertBone ("femur" :: Text) emptySkeleton
+
+      let rule = ProductionRule
+            { ruleName      = "delete-tibia"
+            , ruleLeft      = ruleL
+            , ruleInterface = ruleK
+            , ruleRight     = ruleR
+            , morphismL     = (Map.empty, Map.fromList [(k0, l0)])
+            , morphismR     = (Map.empty, Map.fromList [(k0, r0)])
+            }
+
+      let matches = findMatches rule host
+      length matches `shouldBe` 1
+
+      case matches of
+        [] -> expectationFailure "Expected 1 match"
+        (m : _) -> do
+          -- Deleting tibia leaves external joint 1 (tibia -> fibula) dangling!
+          case validateGluingCondition rule m host of
+            Left (DanglingConditionViolated msg) ->
+              msg `shouldSatisfy` (\t -> not (null (show t)))
+            other ->
+              expectationFailure ("Expected DanglingConditionViolated, got: " ++ show other)
+
+          case applyRule rule m host of
+            Left (DanglingConditionViolated _) -> pure ()
+            other ->
+              expectationFailure ("applyRule should fail with DanglingConditionViolated, got: " ++ show other)
+
+    it "rejects non-injective match outside interface violating identification condition" do
+      -- Host graph with single vertex
+      let (_b0, host) = insertBone ("vertebra" :: Text) emptySkeleton
+
+      -- Rule with pattern L containing two distinct vertices
+      let (l0, lS0) = insertBone ("vertebra" :: Text) emptySkeleton
+          (l1, ruleL) = insertBone "vertebra" lS0
+          ruleK = emptySkeleton :: Skeleton Text
+          ruleR = emptySkeleton :: Skeleton Text
+
+      let rule = ProductionRule
+            { ruleName      = "fuse-vertebrae"
+            , ruleLeft      = ruleL
+            , ruleInterface = ruleK
+            , ruleRight     = ruleR
+            , morphismL     = (Map.empty, Map.empty)
+            , morphismR     = (Map.empty, Map.empty)
+            }
+
+      -- Non-injective match mapping both l0 and l1 to host b0
+      let nonInjectiveMatch = GraphMatch
+            { matchJoints = Map.empty
+            , matchBones  = Map.fromList [(l0, BoneId 0), (l1, BoneId 0)]
+            }
+
+      case validateGluingCondition rule nonInjectiveMatch host of
+        Left (IdentificationConditionViolated msg) ->
+          msg `shouldSatisfy` (\t -> not (null (show t)))
+        other ->
+          expectationFailure ("Expected IdentificationConditionViolated, got: " ++ show other)
+
+      case applyRule rule nonInjectiveMatch host of
+        Left (IdentificationConditionViolated _) -> pure ()
+        other ->
+          expectationFailure ("applyRule should fail with IdentificationConditionViolated, got: " ++ show other)
+
+    it "preserves graph isomorphism and uniqueness under identity rules (L = K = R)" do
+      -- Host graph with 3 bones and 2 joints
+      let (b0, g0) = insertBone ("humerus" :: Text) emptySkeleton
+          (b1, g1) = insertBone "radius" g0
+          (b2, g2) = insertBone "ulna" g1
+          (j0, g3) = connectJoint b0 b1 g2
+          (j1, host) = connectJoint b0 b2 g3
+
+      -- Identity rule where L = K = R = host
+      let rule = ProductionRule
+            { ruleName      = "identity-rule"
+            , ruleLeft      = host
+            , ruleInterface = host
+            , ruleRight     = host
+            , morphismL     = (Map.fromList [(j0, j0), (j1, j1)], Map.fromList [(b0, b0), (b1, b1), (b2, b2)])
+            , morphismR     = (Map.fromList [(j0, j0), (j1, j1)], Map.fromList [(b0, b0), (b1, b1), (b2, b2)])
+            }
+
+      let identityMatch = GraphMatch
+            { matchJoints = Map.fromList [(j0, j0), (j1, j1)]
+            , matchBones  = Map.fromList [(b0, b0), (b1, b1), (b2, b2)]
+            }
+
+      -- Pushout complement uniqueness
+      case derivePushoutComplement rule identityMatch host of
+        Left err -> expectationFailure ("Complement failed: " ++ show err)
+        Right d -> do
+          totalBones d `shouldBe` totalBones host
+          totalJoints d `shouldBe` totalJoints host
+          allBones d `shouldBe` allBones host
+          allJoints d `shouldBe` allJoints host
+          d `shouldBe` host
+
+          -- Second pushout H ≅ G
+          case constructPushout rule identityMatch d of
+            Left err -> expectationFailure ("Pushout failed: " ++ show err)
+            Right h -> do
+              totalBones h `shouldBe` totalBones host
+              totalJoints h `shouldBe` totalJoints host
+              allBones h `shouldBe` allBones host
+              allJoints h `shouldBe` allJoints host
+              h `shouldBe` host
+
+      -- End-to-end rewrite H ≅ G
+      case applyRule rule identityMatch host of
+        Left err -> expectationFailure ("applyRule failed: " ++ show err)
+        Right h  -> h `shouldBe` host

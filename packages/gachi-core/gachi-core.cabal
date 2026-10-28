@@ -15,6 +15,7 @@ library
   exposed-modules:
     Gachi.Core
     Gachi.Core.Atomic
+    Gachi.Core.Rewriting
     Gachi.Core.Traversal
     Gachi.Osteology
     Gachi.Osteology.Atomic
