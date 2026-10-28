@@ -65,6 +65,7 @@ steps:
       2. Implement `repToSegment`: wraps `SmallArray (f Any)` into `OsteoSegment` with 0 offset and full length.
       3. Implement bidirectional Bone payload to Polytropos extensible record codecs.
       4. Ground Note [Zero-Cost Polytropos Rep Coercions] with tag `note-osteo-polytropos-coercion`.
+         NOTE: Define this tag exactly ONCE in the codebase (inside the Note block, never in module docstrings).
     duration: "45m"
 
   - id: add-isomorphism-test-suite

@@ -13,9 +13,19 @@ cabal build gachi-core
 echo "  -> Running cabal test gachi-core:test:tests..."
 cabal test gachi-core:test:tests
 
-# 3. Check for Note [Double-Pushout Algebraic Graph Rewriting]
+# 3. Check for Note [Double-Pushout Algebraic Graph Rewriting] (must be defined exactly once)
 echo "  -> Auditing for Note [Double-Pushout Algebraic Graph Rewriting]..."
-grep -rn "\[tag:note-dpo-graph-rewriting\]" packages/gachi-core/src/
+tag_count=$(grep -rn "\[tag:note-dpo-graph-rewriting\]" packages/gachi-core/src/ | wc -l)
+if [ "$tag_count" -ne 1 ]; then
+  echo "ERROR: Expected [tag:note-dpo-graph-rewriting] to appear exactly once, but found $tag_count occurrences!"
+  grep -rn "\[tag:note-dpo-graph-rewriting\]" packages/gachi-core/src/
+  exit 1
+fi
+echo "  [PASS] Tag defined exactly once."
+
+# 3b. Verify Tagref cross-references
+echo "  -> Verifying Tagref cross-references..."
+./bin/gachi-tagref
 
 # 4. Audit for zero partial functions
 echo "  -> Auditing gachi-core for zero partial functions..."

@@ -81,6 +81,7 @@ steps:
       5. Implement `applyRule :: ProductionRule -> GraphMatch -> Skeleton -> Either RewritingError Skeleton`:
          End-to-end atomic DPO rewrite.
       6. Ground Note [Double-Pushout Algebraic Graph Rewriting] with tag `note-dpo-graph-rewriting`.
+         NOTE: Define this tag exactly ONCE in the codebase (inside the Note block, never in module docstrings).
     duration: "45m"
 
   - id: add-dpo-algebraic-test-suite
