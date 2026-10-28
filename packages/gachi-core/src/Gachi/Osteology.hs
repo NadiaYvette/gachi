@@ -54,7 +54,12 @@ module Gachi.Osteology
   , sliceBytes
   , fromByteList
   , toByteList
+
+    -- * Unboxed Atomic Joint Storage
+  , module Gachi.Osteology.Atomic
   ) where
+
+import Gachi.Osteology.Atomic
 
 import Control.Monad.ST (runST)
 import qualified Data.Primitive.ByteArray as BA

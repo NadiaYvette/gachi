@@ -51,7 +51,12 @@ module Gachi.Core
   , allJoints
   , incidentJoints
   , sliceBones
+
+    -- * Lock-Free Atomic Joint State Machine
+  , module Gachi.Core.Atomic
   ) where
+
+import Gachi.Core.Atomic
 
 import Data.Word (Word64)
 import GHC.Generics (Generic)

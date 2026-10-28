@@ -48,11 +48,16 @@ The foundational package `packages/gachi-core` is scaffolded with pure osteologi
     - `phase5-01-detached-git-store.yaml`: Milestone 5.1 (Detached Git Store Architecture, `packages/gachi-plan`).
     - `phase5-02-snapshot-ledger.yaml`: Milestone 5.2 (Append-Only Snapshot Ledger).
     - `phase5-03-cli-plan-governance.yaml`: Milestone 5.3 (CLI Plan Governance Subcommands, `gachi plan` / `plan-ctl`).
-    - `phase6-01-atomic-bone-machines.yaml`: Milestone 6.1 (Atomic Bone State Machines, `Gachi.Core.Atomic`).
+    - `phase6-01-atomic-bone-machines.yaml`: Milestone 6.1 (Atomic Bone State Machines, `Gachi.Core.Atomic`). [COMPLETED]
     - `phase6-02-multi-agent-traversal.yaml`: Milestone 6.2 (Multi-Agent Concurrent Traversal, `Gachi.Core.Traversal`).
     - `phase6-03-dpo-graph-rewriting.yaml`: Milestone 6.3 (Double-Pushout DPO Algebraic Graph Rewriting, `Gachi.Core.Rewriting`).
     - `phase6-04-polytropos-coercions.yaml`: Milestone 6.4 (Polytropos Zero-Cost Coercions, `Gachi.Osteology.Polytropos`).
   - Implemented 7 companion executable verification gate scripts in `scripts/tasks/*-verify.sh`.
+  - **Milestone 6.1 Completed (`Gachi.Core.Atomic`):**
+    - Grounded unboxed 64-bit tagged word layouts (`JointState`, `encodeJointState`, `decodeJointState`) and primitive array atomic reference primitives (`AtomicJoint`) in `Gachi.Osteology.Atomic`.
+    - Implemented compare-and-swap state machine transitions (`casJointState`), wait-free monotonic snapshot reads (`readJointState`), and jittered bounded exponential backoff (`transitionJointWithBackoff`) in `Gachi.Core.Atomic`.
+    - Documented canonical `Note [Chattering Lock-Free Atomic Synchronization]` (`[ref:note-chattering-synchronization]`).
+    - Verified 22/22 passing tests in `packages/gachi-core/test/Main.hs` with zero compiler warnings under `-Wall -Werror`, zero partial functions, and multi-threaded contention CAS race linearization.
 - **Active Frontier:** Phase 4: Non-Destructive Project Retrofitting Engine (`gachi retrofit`) / Milestone 4.4: Empirical Victim Project Crucible (`~/src/gongju/`).
 - **Verification Status:** All 5 physical verification gates (`bin/gachi-verify`) passing cleanly with 0 warnings, 0 hints, 0 dangling tagref references (20 tags, 183 references validated in 103 files), 0 broken markdown links (89 checked across 33 files), and 47.4% comment density in production code across 6 packages (143/143 total Hspec tests passing).
 

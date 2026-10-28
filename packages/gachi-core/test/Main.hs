@@ -1,11 +1,15 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main (main) where
 
-import Test.Hspec
+import Control.Concurrent (forkIO, newEmptyMVar, putMVar, readMVar, takeMVar)
+import Control.Monad (forM_, replicateM)
 import Data.Text (Text)
-import Data.Word (Word8)
+import Data.Word (Word64, Word8)
+import Test.Hspec
 
 import Gachi.Core
 import Gachi.Osteology
@@ -158,3 +162,181 @@ main = hspec do
           bytesLength sl `shouldBe` 3
           toByteList sl `shouldBe` [20, 30, 40]
       sliceBytes 0 10 bs `shouldBe` Nothing
+
+  -- Tested against Note [Chattering Lock-Free Atomic Synchronization] [ref:note-chattering-synchronization]
+  describe "Gachi.Osteology.Atomic Tagged Word Layouts" do
+    it "faithfully roundtrips all JointState constructors through 64-bit tagged words" do
+      decodeJointState (encodeJointState JointInert) `shouldBe` JointInert
+      decodeJointState (encodeJointState (JointChattering 0)) `shouldBe` JointChattering 0
+      decodeJointState (encodeJointState (JointChattering 42)) `shouldBe` JointChattering 42
+      decodeJointState (encodeJointState (JointChattering 0x1FFFFFFFFFFFFFFF))
+        `shouldBe` JointChattering 0x1FFFFFFFFFFFFFFF
+      decodeJointState (encodeJointState (JointSynchronized 0)) `shouldBe` JointSynchronized 0
+      decodeJointState (encodeJointState (JointSynchronized 99999)) `shouldBe` JointSynchronized 99999
+      decodeJointState (encodeJointState JointFused) `shouldBe` JointFused
+
+    it "decodes zeroed memory naturally as JointInert (zero-initialization invariant)" do
+      decodeJointState 0 `shouldBe` JointInert
+
+    it "classifies joint lifecycle states with pure predicates" do
+      isJointInert JointInert `shouldBe` True
+      isJointInert (JointChattering 1) `shouldBe` False
+
+      isJointChattering (JointChattering 10) `shouldBe` True
+      isJointChattering JointInert `shouldBe` False
+
+      isJointSynchronized (JointSynchronized 440) `shouldBe` True
+      isJointSynchronized JointInert `shouldBe` False
+
+      isJointFused JointFused `shouldBe` True
+      isJointFused JointInert `shouldBe` False
+
+  describe "Gachi.Core.Atomic Hardware Compare-And-Swap (Single-Threaded)" do
+    it "initializes an unboxed joint reference to JointInert" do
+      joint <- newAtomicJoint JointInert
+      st <- readJointState joint
+      st `shouldBe` JointInert
+
+    it "succeeds on valid expected state and fails on mismatched expected state" do
+      joint <- newAtomicJoint JointInert
+
+      -- 1. Valid transition: JointInert -> JointChattering 1
+      res1 <- casJointState joint JointInert (JointChattering 1)
+      res1 `shouldBe` True
+      readJointState joint `shouldReturn` JointChattering 1
+
+      -- 2. Mismatched transition: expected JointInert but current is JointChattering 1
+      res2 <- casJointState joint JointInert (JointChattering 2)
+      res2 `shouldBe` False
+      -- Memory must remain untouched
+      readJointState joint `shouldReturn` JointChattering 1
+
+      -- 3. Transition to JointSynchronized 440
+      res3 <- casJointState joint (JointChattering 1) (JointSynchronized 440)
+      res3 `shouldBe` True
+      readJointState joint `shouldReturn` JointSynchronized 440
+
+      -- 4. Transition to terminal JointFused
+      res4 <- casJointState joint (JointSynchronized 440) JointFused
+      res4 `shouldBe` True
+      readJointState joint `shouldReturn` JointFused
+
+    it "transitions joint with transitionJointWithBackoff" do
+      joint <- newAtomicJoint JointInert
+      res <- transitionJointWithBackoff joint (\s -> case s of
+        JointInert -> Just (JointChattering 1)
+        _          -> Nothing) 5
+      res `shouldBe` Right (JointChattering 1)
+      readJointState joint `shouldReturn` JointChattering 1
+
+    it "fails with InvalidTransition when transition function disallows state" do
+      joint <- newAtomicJoint JointFused
+      res <- transitionJointWithBackoff joint (\s -> case s of
+        JointChattering n -> Just (JointChattering (n + 1))
+        _                 -> Nothing) 5
+      res `shouldBe` Left (InvalidTransition JointFused)
+      readJointState joint `shouldReturn` JointFused
+
+  describe "Gachi.Core.Atomic Multi-Threaded High-Contention CAS Race" do
+    it "resolves a 20-thread CAS race where exactly one thread succeeds and zero corrupt states emerge" do
+      joint <- newAtomicJoint JointInert
+      resultsMVar <- newEmptyMVar
+      barrier <- newEmptyMVar
+      let numThreads = 20 :: Int
+
+      forM_ [1 .. numThreads] \tid -> forkIO do
+        -- Synchronize starting line
+        readMVar barrier
+        success <- casJointState joint JointInert (JointChattering (fromIntegral tid))
+        putMVar resultsMVar (tid, success)
+
+      -- Release all threads simultaneously
+      putMVar barrier ()
+
+      results <- replicateM numThreads (takeMVar resultsMVar)
+      let winners = [ tid | (tid, True) <- results ]
+
+      -- Exactly one thread must win the race
+      length winners `shouldBe` 1
+
+      case winners of
+        [winnerId] -> do
+          finalState <- readJointState joint
+          finalState `shouldBe` JointChattering (fromIntegral winnerId)
+        _ -> expectationFailure ("Expected exactly 1 winner, but got: " ++ show winners)
+
+    it "linearizes 500 concurrent transitions across 20 threads with bounded backoff" do
+      joint <- newAtomicJoint JointInert
+      let numThreads = 20 :: Int
+          incrementsPerThread = 25 :: Int
+      barrier <- newEmptyMVar
+      doneMVar <- newEmptyMVar
+
+      forM_ [1 .. numThreads] \_ -> forkIO do
+        readMVar barrier
+        forM_ [1 .. incrementsPerThread] \_ -> do
+          res <- transitionJointWithBackoff joint (\case
+            JointInert        -> Just (JointChattering 1)
+            JointChattering n -> Just (JointChattering (n + 1))
+            _                 -> Nothing) 100
+          case res of
+            Left err -> putMVar doneMVar (Just err)
+            Right _  -> pure ()
+        putMVar doneMVar Nothing
+
+      -- Release all worker threads
+      putMVar barrier ()
+
+      errors <- replicateM numThreads (takeMVar doneMVar)
+      -- Assert zero backoff errors occurred
+      let failed = [ err | Just err <- errors ]
+      failed `shouldBe` []
+
+      -- Total increments = 20 * 25 = 500
+      finalState <- readJointState joint
+      finalState `shouldBe` JointChattering (fromIntegral (numThreads * incrementsPerThread))
+
+  describe "Gachi.Core.Atomic Wait-Free Reads Under Write Saturation" do
+    it "maintains wait-free monotonic read progression under heavy writer contention" do
+      joint <- newAtomicJoint (JointChattering 0)
+      let writeIterations = 2000 :: Word64
+          numReaders = 4 :: Int
+          readsPerReader = 500 :: Int
+      startBarrier <- newEmptyMVar
+      readerDone <- newEmptyMVar
+
+      -- Spawn concurrent reader threads
+      forM_ [1 .. numReaders] \_ -> forkIO do
+        readMVar startBarrier
+        let loop 0 !_prev = pure ()
+            loop !k !prev = do
+              st <- readJointState joint
+              case st of
+                JointChattering cur -> do
+                  if cur >= prev
+                    then loop (k - 1) cur
+                    else putMVar readerDone (Just ("Non-monotonic read: observed " ++ show cur ++ " after " ++ show prev))
+                _ -> putMVar readerDone (Just ("Unexpected state during saturation: " ++ show st))
+        loop readsPerReader 0
+        putMVar readerDone Nothing
+
+      -- Spawn writer thread saturating the atomic joint with transitions
+      writerDone <- newEmptyMVar
+      _ <- forkIO do
+        readMVar startBarrier
+        forM_ [1 .. writeIterations] \i -> do
+          writeJointState joint (JointChattering i)
+        putMVar writerDone ()
+
+      -- Trigger all threads simultaneously
+      putMVar startBarrier ()
+
+      -- Wait for writer and readers
+      takeMVar writerDone
+      readerErrors <- replicateM numReaders (takeMVar readerDone)
+
+      let badReads = [ err | Just err <- readerErrors ]
+      badReads `shouldBe` []
+
+      finalState <- readJointState joint
+      finalState `shouldBe` JointChattering writeIterations
