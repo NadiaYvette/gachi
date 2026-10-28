@@ -77,8 +77,7 @@ In software systems engineering, two chronic failure modes plague multi-reposito
   Defines cross-project invariants for workspace layout, formatters, linters, git hooks, and agent advisory layers across `~/src/*` per `~/src/PLAN.md` §1.A.
 - **Note [Dhall Parameterized Skeleton Templating]** (`Gachi.Schema`) [ref:note-dhall-skeleton-templating]:
   Specifies the Dhall configuration schema and code-generation rules for multi-package workspace skeletons leveraging `polytropos-dhall`.
-- **Note [Plan Governance and Rollback Mechanics]**
-  [tag:note-plan-governance-rollback]
+- **Note [Plan Governance and Rollback Mechanics]** (`Gachi.Plan.Store`) [ref:note-plan-governance-rollback]:
   Details the detached Git metadata store (`~/src/.plan.git`) and snapshot ledger operations for ecosystem plan delta tracking and atomic rollback.
 - **Note [Non-Destructive Skeleton Overlay]** (`Gachi.Retrofit.Diagnostic`) [ref:note-nondestructive-retrofit]:
   Specifies the diagnostic analyzer and non-destructive file overlay semantics for adopting legacy projects into the canonical ecosystem skeleton.
