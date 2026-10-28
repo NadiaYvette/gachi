@@ -33,6 +33,12 @@ module Gachi.Plan.Types
   , PlanStoreStatus(..)
   , isPlanStoreClean
 
+    -- * Rollback, Diff & Log Models
+  , RollbackResult(..)
+  , PlanDiff(..)
+  , PlanCommit(..)
+  , CheckpointResult(..)
+
     -- * Failure Conditions
   , PlanError(..)
   ) where
@@ -136,6 +142,71 @@ data PlanStoreStatus = PlanStoreStatus
 -- | Predicate checking whether a plan store has zero uncommitted or untracked changes.
 isPlanStoreClean :: PlanStoreStatus -> Bool
 isPlanStoreClean status = not (statusIsDirty status)
+
+-- | Outcome of an atomic rollback operation.
+--
+-- In accordance with Note [Deterministic Plan Rollback Invariants]
+-- [ref:note-plan-rollback-invariants], records the target commit hash, safety pre-mutation
+-- snapshots taken prior to modifying disk state, list of restored governed files,
+-- and bitwise integrity verification status.
+data RollbackResult = RollbackResult
+  { rollbackTargetRef       :: !Text
+    -- ^ The target commit hash or git reference to which the store was rolled back.
+  , rollbackSafetySnapshots :: ![SnapshotMeta]
+    -- ^ Pre-mutation safety snapshots recorded in the ledger prior to destructive checkout.
+  , rollbackRestoredFiles   :: ![FilePath]
+    -- ^ Canonical relative paths of governed files successfully restored from the object store.
+  , rollbackVerified        :: !Bool
+    -- ^ 'True' if restored file contents were verified for byte-level integrity against the git object store.
+  }
+  deriving stock (Eq, Show, Generic)
+
+-- | Structured diff report comparing working planning documents against a Git revision.
+data PlanDiff = PlanDiff
+  { diffTargetRef    :: !(Maybe Text)
+    -- ^ Target git reference compared against ('Nothing' indicates HEAD).
+  , diffRawContent   :: !Text
+    -- ^ Raw unified diff text output from git diff.
+  , diffChangedFiles :: ![FilePath]
+    -- ^ Relative file paths of governed files exhibiting modifications.
+  , diffAdditions    :: !Int
+    -- ^ Total number of added lines (+).
+  , diffDeletions    :: !Int
+    -- ^ Total number of deleted lines (-).
+  }
+  deriving stock (Eq, Show, Generic)
+
+-- | Historical commit record retrieved from the detached Git plan store.
+data PlanCommit = PlanCommit
+  { commitHash      :: !Text
+    -- ^ Full 40-character SHA-1 commit hash.
+  , commitShortHash :: !Text
+    -- ^ Abbreviated commit hash (7 characters).
+  , commitAuthor    :: !Text
+    -- ^ Author name and email stanza.
+  , commitTimestamp :: !UTCTime
+    -- ^ Commit timestamp in UTC.
+  , commitSubject   :: !Text
+    -- ^ First line of commit message.
+  , commitBody      :: !Text
+    -- ^ Commit message explanatory body.
+  , commitTrailers  :: ![(Text, Text)]
+    -- ^ Parsed RFC 2822 git trailers (e.g. ("Assisted-by", "Antigravity")).
+  }
+  deriving stock (Eq, Show, Generic)
+
+-- | Outcome of creating a milestone checkpoint in the plan store.
+data CheckpointResult = CheckpointResult
+  { checkpointCommitSha   :: !Text
+    -- ^ Commit hash of the created checkpoint in the detached store.
+  , checkpointSnapshots   :: ![SnapshotMeta]
+    -- ^ Immutable milestone snapshots recorded in the ledger.
+  , checkpointStagedFiles :: ![FilePath]
+    -- ^ Governed files staged and committed.
+  , checkpointMessage     :: !Text
+    -- ^ Final commit message including attribution trailers.
+  }
+  deriving stock (Eq, Show, Generic)
 
 -- | Error conditions encountered during detached Git store lifecycle or operations.
 data PlanError

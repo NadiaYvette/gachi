@@ -31,6 +31,7 @@ library
   import: commons
   exposed-modules:
     Gachi.Plan
+    Gachi.Plan.Rollback
     Gachi.Plan.Snapshot
     Gachi.Plan.Store
     Gachi.Plan.Types

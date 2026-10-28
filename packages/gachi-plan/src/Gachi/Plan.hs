@@ -19,10 +19,14 @@ module Gachi.Plan
     -- * Append-Only Snapshot Ledger Engine
   , module Gachi.Plan.Snapshot
 
+    -- * Atomic Rollback & Differential History Engine
+  , module Gachi.Plan.Rollback
+
     -- * Algebraic Data Models & Types
   , module Gachi.Plan.Types
   ) where
 
+import Gachi.Plan.Rollback
 import Gachi.Plan.Snapshot
 import Gachi.Plan.Store
 import Gachi.Plan.Types
