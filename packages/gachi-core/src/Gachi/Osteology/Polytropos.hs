@@ -3,12 +3,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 -- | Module: Gachi.Osteology.Polytropos
 -- Description: Zero-cost coercions and algebraic isomorphisms between OsteoSegment and Polytropos Rep

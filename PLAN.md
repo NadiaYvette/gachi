@@ -126,26 +126,36 @@
 
 ## Phase 5: Ecosystem Plan Governance & Rollback (`gachi plan` / `plan-ctl`)
 
-- [ ] **Milestone 5.1:** Detached Git Store Architecture (`~/src/.plan.git`)
-  - Initialize isolated Git repository tracking ecosystem governance files (`PLAN.md`, `STATE.md`, `INDEX.md`) across `~/src/` without interfering with child git checkouts.
-- [ ] **Milestone 5.2:** Append-Only Snapshot Ledger (`~/src/plans/snapshots/`)
-  - Automated pre-mutation snapshots with timestamped filenames and SHA256 integrity checksums.
-- [ ] **Milestone 5.3:** CLI Plan Governance Subcommands
-  - `gachi plan checkpoint [message]`: Atomic commit to detached store + snapshot.
-  - `gachi plan diff [ref]`: Semantic delta display against prior checkpoints.
-  - `gachi plan log`: Chronological history of ecosystem planning revisions.
-  - `gachi plan rollback <checkpoint>`: Deterministic, atomic restoration of planning state.
+- [x] **Milestone 5.1:** Detached Git Store Architecture (`~/src/.plan.git`)
+  - Initialized dedicated library package `packages/gachi-plan` managing an isolated, detached Git store tracking ecosystem governance files (`PLAN.md`, `STATE.md`, `INDEX.md`, `docs/INDEX.md`) across `~/src/` without interfering with child git checkouts (`Gachi.Plan.Store`, `Gachi.Plan.Types`, `Gachi.Plan`).
+  - Implemented hermetic Git store operations via `--git-dir` and `--work-tree` flags (`initPlanStore`, `queryPlanStore`, `listTrackedFiles`, `runGitInStore`).
+  - Canonically grounded `Note [Plan Governance and Rollback Mechanics]` (`[ref:note-plan-governance-rollback]`).
+- [x] **Milestone 5.2:** Append-Only Snapshot Ledger (`~/src/plans/snapshots/`)
+  - Grounded append-only snapshot ledger engine `packages/gachi-plan/src/Gachi/Plan/Snapshot.hs` generating timestamped pre-mutation snapshots (`YYYY-MM-DD-HHMMSS-<filename>`) with companion cryptographic `.sha256` integrity sidecars.
+  - Implemented bitwise tamper detection (`verifySnapshotIntegrity`), chronological listing (`listSnapshots`), and milestone checkpoint retention pruning (`pruneSnapshots`).
+  - Canonically grounded `Note [Append-Only Plan Snapshot Invariants]` (`[ref:note-plan-snapshots]`).
+- [x] **Milestone 5.3:** CLI Plan Governance Subcommands
+  - Grounded atomic rollback engine `packages/gachi-plan/src/Gachi/Plan/Rollback.hs` with mandatory pre-mutation safety snapshot creation, hermetic object store restoration, and byte-level verification.
+  - Implemented differential analysis (`computePlanDiff`), chronological commit log queries (`queryPlanLog`), and atomic milestone checkpoint commits (`createPlanCheckpoint`) with canonical Sarutahiko RFC 2822 commit attribution trailers.
+  - Canonically grounded `Note [Deterministic Plan Rollback Invariants]` (`[ref:note-plan-rollback-invariants]`).
 
 ---
 
 ## Phase 6: Lock-Free Chattering Synchronization & Graph Transformations
 
-- [ ] **Milestone 6.1:** Atomic Bone State Machines
-  - Non-blocking compare-and-swap (CAS) primitives on osteological joints.
-  - Deterministic lock-free consensus and harmonic synchrony.
-- [ ] **Milestone 6.2:** Multi-Agent Concurrent Traversal
-  - Safe concurrent traversals without global locks; formal race-freedom guarantees.
-- [ ] **Milestone 6.3:** Double-Pushout (DPO) Algebraic Graph Rewriting
-  - Algebraic rewriting over osteological topologies; fusion with `gargamelle` rewriting engines.
-- [ ] **Milestone 6.4:** Polytropos Zero-Cost Coercions
-  - Zero-copy mapping between osteological arrays and `polytropos-core` flat `Rep` structures.
+- [x] **Milestone 6.1:** Atomic Bone State Machines
+  - Grounded hardware compare-and-swap (CAS) primitives and atomic state machines for skeletal joints in `packages/gachi-core` (`Gachi.Core.Atomic`, `Gachi.Osteology.Atomic`).
+  - Implemented joint state lifecycle (`JointInert`, `JointChattering`, `JointSynchronized`, `JointFused`) with unboxed 64-bit word encoding and bounded exponential backoff contention resolution.
+  - Canonically grounded `Note [Chattering Lock-Free Atomic Synchronization]` (`[ref:note-chattering-synchronization]`).
+- [x] **Milestone 6.2:** Multi-Agent Concurrent Traversal
+  - Grounded wait-free, concurrent graph traversal engine in `packages/gachi-core/src/Gachi/Core/Traversal.hs` (`traverseSkeletonConcurrently`, `foldBonesConcurrently`, `findJointPathConcurrently`, `snapshotSkeleton`).
+  - Provided snapshot isolation across skeletal frontiers during continuous concurrent joint oscillations without global mutex locks.
+  - Canonically grounded `Note [Concurrent Skeletal Graph Traversal]` (`[ref:note-concurrent-traversal]`).
+- [x] **Milestone 6.3:** Double-Pushout (DPO) Algebraic Graph Rewriting
+  - Grounded category-theoretic Double-Pushout (DPO) graph rewriting engine in `packages/gachi-core/src/Gachi/Core/Rewriting.hs` over osteological skeletal graphs.
+  - Implemented monomorphic subgraph matching, adhesive category gluing condition verification (dangling and identification conditions), pushout complement derivation ($D = G \setminus m(L \setminus K)$), and pushout gluing ($H = D \amalg_K R$).
+  - Canonically grounded `Note [Double-Pushout Algebraic Graph Rewriting]` (`[ref:note-dpo-graph-rewriting]`).
+- [x] **Milestone 6.4:** Polytropos Zero-Cost Coercions
+  - Grounded zero-cost memory mapping and bidirectional algebraic isomorphisms in `packages/gachi-core/src/Gachi/Osteology/Polytropos.hs` between contiguous `OsteoSegment` arrays and `polytropos-core` flat `Rep` structures (`Word` tag + `SmallArray (f Any)`).
+  - Eliminated intermediate linked list heap allocations, providing $O(1)$ fast paths and verified roundtrip identity properties ($repToSegment \circ segmentToRep = id$).
+  - Canonically grounded `Note [Zero-Cost Polytropos Rep Coercions]` (`[ref:note-osteo-polytropos-coercion]`).

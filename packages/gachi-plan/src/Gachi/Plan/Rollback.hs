@@ -68,7 +68,9 @@ module Gachi.Plan.Rollback
 import Control.Exception (SomeException, catch)
 import Control.Monad (filterM)
 import qualified Data.ByteString as BS
-import Data.Maybe (mapMaybe)
+import Data.Char (isAsciiLower, isAsciiUpper)
+import Data.Foldable (for_)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -148,9 +150,7 @@ runGitInStoreBytes store args = do
         }
   catch
     (do (mIn, mOut, mErr, ph) <- createProcess p
-        case mIn of
-          Just inh -> hClose inh
-          Nothing  -> pure ()
+        for_ mIn hClose
         outBytes <- case mOut of
           Just outh -> BS.hGetContents outh
           Nothing   -> pure BS.empty
@@ -320,7 +320,7 @@ extractTrailers bodyText =
                 in Just (k, val)
           _ -> Nothing
       isTrailerKey k =
-        not (T.null k) && T.all (\c -> c == '-' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) k
+        not (T.null k) && T.all (\c -> c == '-' || isAsciiLower c || isAsciiUpper c) k
   in mapMaybe parseTrailerLine bodyLines
 
 -- | Queries the chronological commit log of plan governance history.
@@ -381,7 +381,7 @@ createPlanCheckpoint store mUserMsg = do
           case stageRes of
             Left err -> pure (Left err)
             Right stagedPaths -> do
-              let rawMsg = maybe "Ecosystem plan governance checkpoint" id mUserMsg
+              let rawMsg = fromMaybe "Ecosystem plan governance checkpoint" mUserMsg
                   formattedMsg = formatSarutahikoCommitMessage rawMsg
               commitRes <- commitStore store formattedMsg
               case commitRes of

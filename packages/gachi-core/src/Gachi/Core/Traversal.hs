@@ -74,6 +74,7 @@ import Control.Concurrent (forkIO, newEmptyMVar, putMVar, takeMVar, tryTakeMVar)
 import Control.Exception (Exception, SomeException, throwIO, try)
 import Control.Monad (forM_)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import qualified Data.Primitive.SmallArray as SA
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
@@ -235,9 +236,7 @@ snapshotJointStates :: Skeleton a -> IO [OsteoJoint]
 snapshotJointStates skel =
   mapM (\j -> do
     mSt <- readJointSnapshot skel (jointId j)
-    let !st = case mSt of
-                Just s  -> s
-                Nothing -> JointInert
+    let !st = fromMaybe JointInert mSt
     pure (OsteoJoint (jointId j) (jointSource j) (jointTarget j) st)
   ) (allJoints skel)
 
@@ -443,9 +442,7 @@ findJointPathConcurrentlyWith cfg skel startJid endJid = do
         (Just startJoint, Just _)
           | startJid == endJid -> do
               mSt <- readJointSnapshot skel startJid
-              let !st = case mSt of
-                          Just s  -> s
-                          Nothing -> JointInert
+              let !st = fromMaybe JointInert mSt
               pure (Just [OsteoJoint startJid (jointSource startJoint) (jointTarget startJoint) st])
           | otherwise -> do
               let joints = allJoints skel
@@ -475,9 +472,7 @@ findJointPathConcurrentlyWith cfg skel startJid endJid = do
                             let fullPath = reverse (curr : path)
                             osteoPath <- mapM (\j -> do
                               mSt <- readJointSnapshot skel (jointId j)
-                              let !st = case mSt of
-                                          Just s  -> s
-                                          Nothing -> JointInert
+                              let !st = fromMaybe JointInert mSt
                               pure (OsteoJoint (jointId j) (jointSource j) (jointTarget j) st)
                               ) fullPath
                             pure (Just osteoPath)
@@ -556,7 +551,7 @@ findBonePathConcurrentlyWith cfg skel startBid endBid = do
                         | otherwise ->
                             let neighbors = getNeighbors currBid
                                 unvisited = filter (\nxt -> not (Set.member nxt visited)) neighbors
-                                newVisited = foldl' (\s nxt -> Set.insert nxt s) visited unvisited
+                                newVisited = foldl' (flip Set.insert) visited unvisited
                                 newQ = foldl' (\qAcc nxt -> pushQ (nxt, currBid : path) qAcc) restQ unvisited
                             in bfsLoop newQ newVisited
 
@@ -581,7 +576,7 @@ traverseSkeletonBFS skel startBid =
               Just (currBid, restQ) ->
                 let neighbors = Map.findWithDefault [] currBid incMap
                     unvisited = filter (\nxt -> not (Set.member nxt visited)) neighbors
-                    newVisited = foldl' (\s nxt -> Set.insert nxt s) visited unvisited
+                    newVisited = foldl' (flip Set.insert) visited unvisited
                     newQ = foldl' (flip pushQ) restQ unvisited
                     mBone = case lookupBone currBid skel of
                               Just p  -> [Bone currBid p]
@@ -598,7 +593,7 @@ traverseSkeletonBFS skel startBid =
         Just (rootBid, q0) ->
           let nbrs = Map.findWithDefault [] rootBid incMap
               unvisited = filter (\nxt -> not (Set.member nxt initVisited)) nbrs
-              v1 = foldl' (\s nxt -> Set.insert nxt s) initVisited unvisited
+              v1 = foldl' (flip Set.insert) initVisited unvisited
               q1 = foldl' (flip pushQ) q0 unvisited
           in bfs q1 v1 initAcc
 

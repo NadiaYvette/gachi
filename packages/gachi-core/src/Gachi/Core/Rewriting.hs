@@ -425,15 +425,13 @@ derivePushoutComplement rule match host = do
       skelWithBones = foldl' (\s b -> snd (insertBone (bonePayload b) s)) skel0 retainedBones
 
   -- Add retained joints with re-indexed source and target
-  skelWithJoints <- foldM (\s j -> do
+  foldM (\s j -> do
     case (Map.lookup (jointSource j) boneMapGtoD, Map.lookup (jointTarget j) boneMapGtoD) of
       (Just newSrc, Just newDst) ->
         pure (snd (connectJoint newSrc newDst s))
       _ ->
         Left (PushoutComplementFailed "Dangling edge endpoint encountered during complement derivation")
     ) skelWithBones retainedJoints
-
-  pure skelWithJoints
 
 -- | Construct the second pushout skeleton @H = D \amalg_K R@.
 --
@@ -507,15 +505,13 @@ constructPushout rule match d = do
   let rJointImg = Set.fromList (Map.elems r_joints)
       newRJoints = [ j | j <- allJoints (ruleRight rule), not (Set.member (jointId j) rJointImg) ]
 
-  skelWithAllJoints <- foldM (\s j -> do
+  foldM (\s j -> do
     case (Map.lookup (jointSource j) rBoneToH, Map.lookup (jointTarget j) rBoneToH) of
       (Just srcH, Just dstH) ->
         pure (snd (connectJoint srcH dstH s))
       _ ->
         Left (PushoutComplementFailed "New joint in R connects to unmapped bone in H")
     ) skelWithBones newRJoints
-
-  pure skelWithAllJoints
 
 --------------------------------------------------------------------------------
 -- End-to-End Rewriting

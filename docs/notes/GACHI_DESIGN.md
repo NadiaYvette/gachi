@@ -93,5 +93,17 @@ In software systems engineering, two chronic failure modes plague multi-reposito
   Defines the authoritative 5-forge replication topology (Dimension 6) balancing sovereign decentralized storage (Radicle P2P `rad://...`), community non-profit resilience (Framagit GitLab CE, Disroot Forgejo), and global commercial mirrors (GitHub, GitCode). Formalizes provider compliance classification: rigorously excluding prohibited services that enforce restrictive terms of service against automated AI pair programming or reject push replication (SourceHut / `git.sr.ht`), and prohibiting insecure plaintext HTTP transport (`http://...`). Specifies pure semantic URL equivalence (`urlsMatch`), deterministic topology inspection, pure action planning (`RemoteSyncPlan`), and live Git porcelain synchronization (`gachi sync --remotes`).
 - **Note [Cellular Sheaf Coherence and Homological Obstruction Localization]** (`Gachi.Sync.Sheaf`) [ref:note-cellular-sheaf-coherence]:
   Defines the 1-dimensional cellular sheaf model \(\mathcal{F}\) over ecosystem cell complex \(G = (V, E)\) where vertices \(V\) represent repository checkouts (and the canonical reference) and edges \(E\) represent shared contract dimensions (compiler pinning, Cabal version, licenses, git hooks, CI matrices, agent advisories). Specifies the sheaf coboundary operator \(\delta^0 : C^0(G; \mathcal{F}) \to C^1(G; \mathcal{F})\), certifying harmonic equilibrium when \(\delta^0(x) = 0\) (\(H^0\) global section) and localizing exact cohomological boundary obstructions when \(\delta^0(x) \neq 0\) (\(H^1 = \operatorname{coker} \delta^0\)). Powering `gachi doctor --sheaf`.
+- **Note [Progressive Quality Gate Realization and Incremental Compliance Levels]** (`Gachi.Retrofit.QualityGate`) [ref:note-progressive-quality-gates]:
+  Defines four monotonically strictly ordered quality gate levels ($L0 \subset L1 \subset L2 \subset L3$) for retrofitting legacy checkouts: Foundation ($L0$), Structural Integrity ($L1$), Compiler Discipline ($L2$), and Static Analysis Purity ($L3$).
+- **Note [Append-Only Plan Snapshot Invariants]** (`Gachi.Plan.Snapshot`) [ref:note-plan-snapshots]:
+  Specifies the append-only snapshot ledger engine, timestamped pre-mutation snapshot formatting, and SHA-256 sidecar verification guaranteeing bitwise fidelity.
+- **Note [Deterministic Plan Rollback Invariants]** (`Gachi.Plan.Rollback`) [ref:note-plan-rollback-invariants]:
+  Specifies atomic point-in-time recovery, pre-mutation safety snapshot creation, detached Git object store restoration, and byte-level post-checkout verification.
+- **Note [Concurrent Skeletal Graph Traversal]** (`Gachi.Core.Traversal`) [ref:note-concurrent-traversal]:
+  Specifies wait-free concurrent BFS/DFS walks, folds, and pathfinding queries across osteological graphs with snapshot isolation under active joint chattering.
+- **Note [Double-Pushout Algebraic Graph Rewriting]** (`Gachi.Core.Rewriting`) [ref:note-dpo-graph-rewriting]:
+  Specifies category-theoretic Double-Pushout (DPO) graph transformations ($L \hookleftarrow K \hookrightarrow R$) over skeletal graphs, verifying adhesive category gluing conditions (dangling and identification conditions).
+- **Note [Zero-Cost Polytropos Rep Coercions]** (`Gachi.Osteology.Polytropos`) [ref:note-osteo-polytropos-coercion]:
+  Specifies zero-cost memory mapping and bidirectional algebraic isomorphisms between contiguous `OsteoSegment` arrays and Polytropos flat `Rep` structures ($repToSegment \circ segmentToRep = id$).
 
 
