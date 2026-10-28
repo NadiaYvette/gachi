@@ -1,0 +1,88 @@
+---
+id: phase6-01-atomic-bone-machines
+title: Implement Lock-Free Atomic State Machines for Skeletal Joints
+description: |
+  Implement Milestone 6.1 of Phase 6 (Lock-Free Chattering Concurrency & Graph Transformations
+  per ~/src/PLAN.md §1.A).
+  Grounds high-performance lock-free atomic state transition primitives across skeletal joints
+  in `packages/gachi-core` (`Gachi.Core.Atomic`, `Gachi.Osteology.Atomic`).
+
+  Architectural Context:
+  - Hardware Compare-And-Swap (CAS): Uses primitive atomic instructions (`casIntArray#`, `atomicModifyIORef'`)
+    to perform atomic state transitions over osteological joint references with zero global mutexes.
+  - Joint Lifecycle State Machine:
+    - `JointInert`: Stationary joint awaiting excitation.
+    - `JointChattering`: High-frequency lock-free oscillation under multi-agent signal propagation.
+    - `JointSynchronized`: Harmonically locked joint in phase equilibrium.
+    - `JointFused`: Immutable terminal joint state.
+  - Exponential Backoff Protocol: Contending threads employ bounded exponential backoff (`threadDelay`, spin loops)
+    to guarantee wait-free progression for read traversals and livelock prevention.
+  - Ground Note [Chattering Lock-Free Atomic Synchronization] [ref:note-chattering-synchronization].
+
+dependencies: []
+
+packages:
+  - gachi-core
+
+executor: agy
+model: gemini-3.1-pro-high
+skills:
+  - tricorder
+  - code-navigation
+max_turns: 12
+run_budget: 600
+max_repair_attempts: 3
+
+steps:
+  - id: define-atomic-joint-types
+    name: Define JointState algebraic data types and atomic memory layouts
+    action: |
+      In `packages/gachi-core/src/Gachi/Osteology/Atomic.hs`:
+      1. Define `JointState`:
+         ```haskell
+         data JointState
+           = JointInert
+           | JointChattering !Word64
+           | JointSynchronized !Word64
+           | JointFused
+           deriving stock (Eq, Ord, Show, Generic)
+         ```
+      2. Define `AtomicJoint`: Unboxed atomic reference storing tagged state words.
+      3. Implement word encoding/decoding: `encodeJointState :: JointState -> Word64` and `decodeJointState :: Word64 -> JointState`.
+    duration: "30m"
+
+  - id: implement-cas-state-machine
+    name: Implement hardware CAS operations and exponential backoff retry protocol
+    action: |
+      In `packages/gachi-core/src/Gachi/Core/Atomic.hs`:
+      1. Implement `casJointState :: AtomicJoint -> JointState -> JointState -> IO Bool`:
+         Atomic compare-and-swap updating state if expected matches current.
+      2. Implement `transitionJointWithBackoff :: AtomicJoint -> (JointState -> Maybe JointState) -> Int -> IO (Either AtomicError JointState)`:
+         Executes optimistic read -> compute target -> CAS loop with bounded exponential backoff on contention.
+      3. Implement `readJointState :: AtomicJoint -> IO JointState`:
+         Wait-free atomic memory read.
+      4. Ground Note [Chattering Lock-Free Atomic Synchronization] [ref:note-chattering-synchronization].
+    duration: "45m"
+
+  - id: add-concurrency-stress-tests
+    name: Implement concurrent multi-threaded stress tests
+    action: |
+      In `packages/gachi-core/test/Main.hs`:
+      1. Test single-threaded CAS transitions: valid transitions succeed, invalid expected states fail.
+      2. Test high-contention multi-threaded transition race: spawn 20 concurrent threads attempting CAS transitions
+         on a shared joint; assert exactly one thread succeeds per state and zero corrupt states emerge.
+      3. Test read wait-freedom under write saturation: reader threads consistently observe valid state progression.
+    duration: "30m"
+
+  - id: verify-gate
+    name: Run verification gate
+    action: |
+      Run `cabal test gachi-core:test:tests` and execute `sh scripts/tasks/phase6-01-atomic-bone-machines-verify.sh`.
+    duration: "10m"
+
+success_criteria:
+  - `gachi-core` compiles warning-free under `-Wall -Wcompat -Wredundant-constraints`.
+  - Joint transitions operate strictly lock-free with zero mutex deadlocks.
+  - Concurrent CAS stress tests with 20+ threads pass cleanly without race conditions or memory corruption.
+  - Reader threads achieve wait-free progress under active write contention.
+  - Note [Chattering Lock-Free Atomic Synchronization] [ref:note-chattering-synchronization] validated by Tagref.

@@ -1,0 +1,110 @@
+---
+id: phase6-03-dpo-graph-rewriting
+title: Implement Double-Pushout (DPO) Algebraic Graph Rewriting Over Osteological Topologies
+description: |
+  Implement Milestone 6.3 of Phase 6 (Lock-Free Chattering Concurrency & Graph Transformations
+  per ~/src/PLAN.md §1.A).
+  Establishes a rigorous category-theoretic Double-Pushout (DPO) graph rewriting engine
+  in `packages/gachi-core` (`Gachi.Core.Rewriting`), enabling declarative, provably sound
+  topological transformations (node fission/fusion, edge insertion/deletion, contractive simplification)
+  over osteological skeletal graphs with seamless integration into `gargamelle` rewriting and pattern-matching engines.
+
+  Architectural Context:
+  - Double-Pushout (DPO) Framework:
+    A production rule $p = (L \hookleftarrow K \hookrightarrow R)$ comprises:
+    - Left-hand pattern $L$ (subgraph to match in host graph $G$).
+    - Interface / gluing graph $K$ (subgraph preserved by the transformation).
+    - Right-hand replacement $R$ (subgraph replacing $L \setminus K$ in result $H$).
+    - Monic embeddings $l: K \to L$ and $r: K \to R$.
+  - Two-Step Pushout Construction:
+    1. First Pushout Complement (Deletion): $G \cong L \amalg_K D$, deriving context graph $D = G \setminus m(L \setminus K)$.
+    2. Second Pushout (Addition): $H \cong D \amalg_K R$, gluing replacement $R$ along interface $K$ to produce derived graph $H$.
+  - Gluing Condition Verification:
+    Before deletion, the match $m: L \to G$ must satisfy the standard adhesive category gluing condition:
+    - Dangling Condition: No edge in $G \setminus m(L)$ is incident to a vertex in $m(L \setminus K)$.
+    - Identification Condition: $m$ identifies two distinct items in $L$ only if both belong to $l(K)$.
+  - Osteological Memory Invariants:
+    Rewriting preserves contiguous bone indexing and monotonic identifier allocation within `OsteoSegment` arrays.
+  - Ground Note [Double-Pushout Algebraic Graph Rewriting] (tag: note-dpo-graph-rewriting).
+
+dependencies:
+  - phase6-01-atomic-bone-machines
+  - phase6-02-multi-agent-traversal
+
+packages:
+  - gachi-core
+
+executor: agy
+model: gemini-3.1-pro-high
+skills:
+  - tricorder
+  - code-navigation
+max_turns: 12
+run_budget: 600
+max_repair_attempts: 3
+
+steps:
+  - id: define-dpo-types
+    name: Define categorical graph rewriting data types and morphisms
+    action: |
+      In `packages/gachi-core/src/Gachi/Core/Rewriting.hs`:
+      1. Define `ProductionRule`:
+         - `ruleName :: !Text`
+         - `ruleLeft :: !Skeleton`
+         - `ruleInterface :: !Skeleton`
+         - `ruleRight :: !Skeleton`
+         - `morphismL :: !(Map JointId JointId, Map BoneId BoneId)`
+         - `morphismR :: !(Map JointId JointId, Map BoneId BoneId)`
+      2. Define `GraphMatch`:
+         - `matchJoints :: !(Map JointId JointId)`
+         - `matchBones :: !(Map BoneId BoneId)`
+      3. Define `RewritingError`:
+         - `MatchNotFound !Text`
+         - `DanglingConditionViolated !Text`
+         - `IdentificationConditionViolated !Text`
+         - `PushoutComplementFailed !Text`
+         - `InvalidRuleMorphism !Text`
+    duration: "30m"
+
+  - id: implement-dpo-engine
+    name: Implement matching, gluing condition validation, and pushout construction
+    action: |
+      In `packages/gachi-core/src/Gachi/Core/Rewriting.hs`:
+      1. Implement `findMatches :: ProductionRule -> Skeleton -> [GraphMatch]`:
+         Monomorphic subgraph search identifying candidates in host skeleton.
+      2. Implement `validateGluingCondition :: ProductionRule -> GraphMatch -> Skeleton -> Either RewritingError ()`:
+         Verifies both Dangling Condition (no external edges to deleted vertices) and Identification Condition.
+      3. Implement `derivePushoutComplement :: ProductionRule -> GraphMatch -> Skeleton -> Either RewritingError Skeleton`:
+         Computes context graph $D = G \setminus m(L \setminus K)$.
+      4. Implement `constructPushout :: ProductionRule -> GraphMatch -> Skeleton -> Either RewritingError Skeleton`:
+         Glues $R$ to $D$ along $K$ producing target skeleton $H = D \amalg_K R$.
+      5. Implement `applyRule :: ProductionRule -> GraphMatch -> Skeleton -> Either RewritingError Skeleton`:
+         End-to-end atomic DPO rewrite.
+      6. Ground Note [Double-Pushout Algebraic Graph Rewriting] with tag `note-dpo-graph-rewriting`.
+    duration: "45m"
+
+  - id: add-dpo-algebraic-test-suite
+    name: Implement comprehensive category-theoretic rewriting tests
+    action: |
+      In `packages/gachi-core/test/Main.hs`:
+      1. Test valid DPO rule application: replace a chain of two bones with a single bridged bone,
+         verifying that the derived graph preserves unaffected adjacent topology.
+      2. Test dangling condition rejection: verify that attempting to delete a joint while external
+         incident bones remain attached triggers `DanglingConditionViolated`.
+      3. Test identification condition rejection: verify that non-injective matching outside interface
+         triggers `IdentificationConditionViolated`.
+      4. Test pushout complement uniqueness and identity rules (where $L = K = R$, producing $H \cong G$).
+    duration: "45m"
+
+  - id: verify-gate
+    name: Run verification gate
+    action: |
+      Run `cabal test gachi-core:test:tests` and execute `sh scripts/tasks/phase6-03-dpo-graph-rewriting-verify.sh`.
+    duration: "10m"
+
+success_criteria:
+  - `gachi-core` compiles warning-free under `-Wall -Wcompat -Wredundant-constraints`.
+  - DPO graph rewriting strictly enforces adhesive category gluing conditions.
+  - Pushout complement and pushout derivation maintain topological integrity and contiguous indexing.
+  - All test assertions in `packages/gachi-core/test/Main.hs` pass cleanly.
+  - Note [Double-Pushout Algebraic Graph Rewriting] (tag: note-dpo-graph-rewriting) grounded and validated.

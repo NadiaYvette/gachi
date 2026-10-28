@@ -1,0 +1,88 @@
+---
+id: phase5-02-snapshot-ledger
+title: Implement Append-Only Snapshot Ledger and SHA-256 Integrity Verification
+description: |
+  Implement Milestone 5.2 of Phase 5 (Ecosystem Plan Governance & Rollback per ~/src/PLAN.md §1.A).
+  Extends `packages/gachi-plan` with an append-only snapshot ledger engine writing immutable
+  pre-mutation backups to `~/src/plans/snapshots/` (configurable via `PLAN_SNAPSHOT_DIR`).
+
+  Architectural Context:
+  - Timestamped Snapshots: Files are named `YYYY-MM-DD-HHMMSS-<filename>` (e.g. `2026-10-28-174500-PLAN.md`).
+  - Sidecar Cryptographic Verification: Each snapshot is accompanied by a companion `.sha256` digest file
+    guaranteeing bitwise data integrity and tamper detection.
+  - Immutability & Append-Only Invariant: Snapshots once written are read-only and never overwritten in-place.
+  - Snapshot Pruning Policy: Automated retention management keeping recent pre-mutation snapshots while
+    permanently preserving milestone checkpoints marked with semantic labels.
+  - Ground Note [Append-Only Plan Snapshot Invariants] (tag: note-plan-snapshots).
+
+dependencies:
+  - phase5-01-detached-git-store
+
+packages:
+  - gachi-plan
+
+executor: agy
+model: gemini-3.1-pro-high
+skills:
+  - tricorder
+  - code-navigation
+  - contextful
+max_turns: 12
+run_budget: 600
+max_repair_attempts: 3
+
+steps:
+  - id: implement-snapshot-types-and-hashing
+    name: Implement snapshot metadata and SHA-256 sidecar generation
+    action: |
+      In `packages/gachi-plan/src/Gachi/Plan/Types.hs` and `Gachi/Plan/Snapshot.hs`:
+      1. Define `SnapshotMeta`:
+         - `snapshotId :: !Text`
+         - `snapshotPath :: !FilePath`
+         - `snapshotTimestamp :: !UTCTime`
+         - `snapshotSha256 :: !Text`
+         - `snapshotSourceFile :: !FilePath`
+         - `snapshotIsCheckpoint :: !Bool`
+      2. Implement SHA-256 checksum calculation over file content using `Gachi.Sync.Hash` or pure crypto primitives.
+      3. Implement sidecar writing: writes `<filename>.sha256` alongside each snapshot.
+    duration: "30m"
+
+  - id: implement-snapshot-ledger-engine
+    name: Implement snapshot creation, verification, and pruning routines
+    action: |
+      In `packages/gachi-plan/src/Gachi/Plan/Snapshot.hs`:
+      1. Implement `createSnapshot :: FilePath -> FilePath -> Bool -> IO (Either PlanError SnapshotMeta)`:
+         Atomically copies target governance file into snapshot directory with timestamp prefix,
+         computes SHA-256 digest, and writes sidecar.
+      2. Implement `verifySnapshotIntegrity :: FilePath -> IO (Either PlanError Bool)`:
+         Recomputes SHA-256 digest of snapshot file and verifies equality with `.sha256` sidecar.
+      3. Implement `listSnapshots :: FilePath -> IO [SnapshotMeta]`:
+         Parses snapshot ledger directory and returns ordered chronological history.
+      4. Implement `pruneSnapshots :: FilePath -> Int -> IO Int`:
+         Prunes non-checkpoint snapshots older than retention threshold while preserving checkpoints.
+      5. Ground Note [Append-Only Plan Snapshot Invariants] with tag `note-plan-snapshots`.
+    duration: "45m"
+
+  - id: add-hspec-test-suite
+    name: Implement comprehensive test specifications for snapshot ledger
+    action: |
+      In `packages/gachi-plan/test/Main.hs`:
+      1. Test snapshot creation with timestamp formatting and sidecar verification.
+      2. Test tamper detection: mutating a snapshot file causes `verifySnapshotIntegrity` to fail.
+      3. Test pruning: non-checkpoint snapshots pruned beyond retention count, checkpoints preserved.
+      4. Test idempotency and error handling for missing files.
+    duration: "30m"
+
+  - id: verify-gate
+    name: Run verification gate
+    action: |
+      Run `cabal test gachi-plan:test:tests` and execute `sh scripts/tasks/phase5-02-snapshot-ledger-verify.sh`.
+    duration: "10m"
+
+success_criteria:
+  - Package `packages/gachi-plan` builds warning-free under `-Wall -Wcompat -Wredundant-constraints`.
+  - Snapshots written to ledger are accompanied by verifiable `.sha256` sidecars.
+  - Tamper detection reliably flags altered snapshot contents.
+  - Pruning honors checkpoint preservation semantics.
+  - All unit and property tests in `packages/gachi-plan/test/Main.hs` pass cleanly.
+  - Note [Append-Only Plan Snapshot Invariants] (tag: note-plan-snapshots) grounded and validated.

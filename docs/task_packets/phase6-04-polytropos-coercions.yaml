@@ -1,0 +1,92 @@
+---
+id: phase6-04-polytropos-coercions
+title: Implement Polytropos Zero-Cost Coercions for Osteological Data Structures
+description: |
+  Implement Milestone 6.4 of Phase 6 (Lock-Free Chattering Concurrency & Graph Transformations
+  per ~/src/PLAN.md §1.A).
+  Establishes zero-cost memory coercions and bidirectional algebraic isomorphisms between
+  `gachi-core` contiguous osteological arrays (`OsteoSegment`, `OsteoBytes`) and `polytropos-core`
+  flat structural runtime representations (`Rep`: Word tag + flat `SmallArray (f Any)`).
+
+  Architectural Context:
+  - Memory Substrate Parity:
+    Both `OsteoSegment` and Polytropos `Rep` are backed by contiguous GHC `SmallArray#` primitives:
+    - `OsteoSegment a`: `SmallArray a`, start offset, slice length.
+    - `Rep f a`: `{-# UNPACK #-} !Word` (constructor tag / discriminant) + `SmallArray (f Any)`.
+  - Zero Linked-List Detour:
+    Traditional Haskell generic conversions traverse through intermediate heap-allocated lists (`[a]`),
+    inducing GC pressure and cache misses. Polytropos zero-cost coercions map between contiguous slices
+    directly via single-memcpy or $O(1)$ array re-interpretation.
+  - Coercion Primitives:
+    - `segmentToRep :: Word -> OsteoSegment (f Any) -> Rep f a`
+    - `repToSegment :: Rep f a -> (Word, OsteoSegment (f Any))`
+    - `bonePayloadToRecord :: Bone -> Record r`
+    - `recordToBonePayload :: Record r -> Bone`
+  - Formal Isomorphism:
+    $repToSegment \circ segmentToRep = id$ and $segmentToRep \circ repToSegment = id$.
+  - Ground Note [Zero-Cost Polytropos Rep Coercions] (tag: note-osteo-polytropos-coercion).
+
+dependencies:
+  - phase6-01-atomic-bone-machines
+  - phase6-02-multi-agent-traversal
+  - phase6-03-dpo-graph-rewriting
+
+packages:
+  - gachi-core
+
+executor: agy
+model: gemini-3.1-pro-high
+skills:
+  - tricorder
+  - code-navigation
+max_turns: 12
+run_budget: 600
+max_repair_attempts: 3
+
+steps:
+  - id: wire-polytropos-dependency
+    name: Wire polytropos-core dependency and define coercion signatures
+    action: |
+      1. In `packages/gachi-core/gachi-core.cabal`:
+         Add `polytropos-core` to `build-depends` (already pinned in workspace `cabal.project`).
+      2. In `packages/gachi-core/src/Gachi/Osteology/Polytropos.hs`:
+         Define coercion functions and error types:
+         - `segmentToRep :: Word -> OsteoSegment (f Any) -> Rep f a`
+         - `repToSegment :: Rep f a -> (Word, OsteoSegment (f Any))`
+         - `data CoercionError = SegmentOutOfBounds !Int !Int | TagMismatch !Word !Word`
+    duration: "30m"
+
+  - id: implement-coercion-engine
+    name: Implement zero-copy and single-memcpy memory mapping routines
+    action: |
+      In `packages/gachi-core/src/Gachi/Osteology/Polytropos.hs`:
+      1. Implement `segmentToRep`: when offset is 0 and length equals array capacity, reuse underlying
+         `SmallArray#` directly without allocation; otherwise perform optimal single slice copy.
+      2. Implement `repToSegment`: wraps `SmallArray (f Any)` into `OsteoSegment` with 0 offset and full length.
+      3. Implement bidirectional Bone payload to Polytropos extensible record codecs.
+      4. Ground Note [Zero-Cost Polytropos Rep Coercions] with tag `note-osteo-polytropos-coercion`.
+    duration: "45m"
+
+  - id: add-isomorphism-test-suite
+    name: Implement comprehensive property and isomorphism test suite
+    action: |
+      In `packages/gachi-core/test/Main.hs`:
+      1. Test roundtrip isomorphism: generate random `OsteoSegment` instances, coerce to Polytropos `Rep`,
+         and verify roundtrip reconstruction is 100% bitwise and value identical.
+      2. Test zero-allocation fast path: verify that full-segment conversions avoid auxiliary array allocations.
+      3. Test record field mapping: verify extensible record extraction matches original bone payload fields.
+      4. Verify zero partial functions and zero compiler warnings.
+    duration: "45m"
+
+  - id: verify-gate
+    name: Run verification gate
+    action: |
+      Run `cabal test gachi-core:test:tests` and execute `sh scripts/tasks/phase6-04-polytropos-coercions-verify.sh`.
+    duration: "10m"
+
+success_criteria:
+  - `gachi-core` compiles warning-free under `-Wall -Wcompat -Wredundant-constraints`.
+  - Coercions operate directly across contiguous array memory without intermediate linked lists.
+  - Roundtrip isomorphism property ($repToSegment \circ segmentToRep = id$) holds strictly.
+  - All unit and property tests in `packages/gachi-core/test/Main.hs` pass cleanly.
+  - Note [Zero-Cost Polytropos Rep Coercions] (tag: note-osteo-polytropos-coercion) grounded and validated.

@@ -1,0 +1,88 @@
+---
+id: phase5-03-cli-plan-governance
+title: Implement CLI Plan Governance Subcommands and Rollback Engine
+description: |
+  Implement Milestone 5.3 of Phase 5 (Ecosystem Plan Governance & Rollback per ~/src/PLAN.md §1.A).
+  Delivers turnkey CLI subcommands under `gachi plan` (`checkpoint`, `diff`, `log`, `rollback`, `status`)
+  integrating the detached Git store architecture and append-only snapshot ledger into operational workflows.
+
+  Architectural Context:
+  - Subcommands:
+    - `gachi plan checkpoint [message]`: Creates immutable ledger snapshots of governed files (`PLAN.md`, `STATE.md`),
+      then atomically commits them to the detached Git store with Sarutahiko RFC 2822 commit attribution trailers.
+    - `gachi plan diff [ref]`: Computes and pretty-prints semantic unified diffs between working files and specified git revisions.
+    - `gachi plan log`: Renders chronological history of plan governance commits with author, timestamp, hash, and trailers.
+    - `gachi plan rollback <checkpoint>`: Deterministic, atomic restoration of planning state; automatically creates a safety
+      snapshot prior to mutating working tree files.
+    - `gachi plan status`: Reports dirty tracking state, uncommitted deltas, and divergence from detached store HEAD.
+  - Formatting Modes: Supports 80-column boxed terminal ASCII dashboards and GFM Markdown output (`--markdown` / `-m`).
+  - Standalone binary / script: Accessible via `gachi plan` and alias `plan-ctl`.
+  - Ground Note [Deterministic Plan Rollback Invariants] (tag: note-plan-rollback-invariants).
+
+dependencies:
+  - phase5-02-snapshot-ledger
+
+packages:
+  - gachi-plan
+  - gachi-cli
+
+executor: agy
+model: gemini-3.1-pro-high
+skills:
+  - tricorder
+  - code-navigation
+  - contextful
+max_turns: 15
+run_budget: 600
+max_repair_attempts: 3
+
+steps:
+  - id: implement-rollback-engine
+    name: Implement atomic rollback engine with safety pre-snapshots
+    action: |
+      In `packages/gachi-plan/src/Gachi/Plan/Rollback.hs`:
+      1. Implement `rollbackToCheckpoint :: PlanStore -> Text -> IO (Either PlanError RollbackResult)`:
+         - Takes pre-mutation safety snapshot of working files.
+         - Restores target files from git object store (`git checkout <ref> -- <files>`).
+         - Verifies restored content byte-level integrity.
+      2. Implement `computePlanDiff :: PlanStore -> Maybe Text -> IO (Either PlanError PlanDiff)`.
+      3. Implement `queryPlanLog :: PlanStore -> Int -> IO (Either PlanError [PlanCommit])`.
+      4. Ground Note [Deterministic Plan Rollback Invariants] with tag `note-plan-rollback-invariants`.
+    duration: "45m"
+
+  - id: wire-cli-options-and-commands
+    name: Wire gachi plan parser and execution routines in gachi-cli
+    action: |
+      1. In `packages/gachi-cli/src/Gachi/CLI/Options.hs`:
+         Define `PlanOptions` and subcommand hierarchy (`PlanCheckpoint`, `PlanDiff`, `PlanLog`, `PlanRollback`, `PlanStatus`).
+      2. In `packages/gachi-cli/src/Gachi/CLI/Plan.hs`:
+         Implement command runners formatting outputs as 80-column ASCII boxes or Markdown.
+      3. In `packages/gachi-cli/src/Gachi/CLI.hs` and `app/Main.hs`:
+         Wire `CmdPlan PlanOptions` into top-level dispatcher.
+      4. Create `bin/plan-ctl` launcher script forwarding to `gachi plan`.
+    duration: "45m"
+
+  - id: add-hspec-integration-tests
+    name: Implement comprehensive CLI and rollback tests
+    action: |
+      In `packages/gachi-cli/test/Main.hs` and `packages/gachi-plan/test/Main.hs`:
+      1. Test CLI parsing of all `gachi plan` flags and subcommands.
+      2. Test end-to-end checkpoint -> modify -> diff -> rollback lifecycle:
+         Assert that rolling back to a checkpoint restores byte-identical content.
+      3. Test safety pre-snapshot creation before destructive rollback.
+      4. Test terminal and Markdown formatting output.
+    duration: "45m"
+
+  - id: verify-gate
+    name: Run verification gate
+    action: |
+      Run `cabal test gachi-plan gachi-cli` and execute `sh scripts/tasks/phase5-03-cli-plan-governance-verify.sh`.
+    duration: "15m"
+
+success_criteria:
+  - Both `gachi-plan` and `gachi-cli` compile cleanly with zero warnings under `-Wall -Wcompat -Wredundant-constraints`.
+  - `gachi plan checkpoint` atomically records snapshots and detached Git commits.
+  - `gachi plan rollback` safely restores previous states with pre-mutation safety backups.
+  - `gachi plan diff`, `log`, and `status` accurately report repository state.
+  - All test assertions in `gachi-plan` and `gachi-cli` pass cleanly.
+  - Note [Deterministic Plan Rollback Invariants] (tag: note-plan-rollback-invariants) grounded and validated.

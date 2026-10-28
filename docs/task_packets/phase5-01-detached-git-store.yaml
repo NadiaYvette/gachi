@@ -1,0 +1,80 @@
+---
+id: phase5-01-detached-git-store
+title: Implement Detached Git Store Architecture for Ecosystem Plan Governance
+description: |
+  Implement Milestone 5.1 of Phase 5 (Ecosystem Plan Governance & Rollback per ~/src/PLAN.md §1.A).
+  Establishes `packages/gachi-plan`, a dedicated library package managing an isolated,
+  detached Git store tracking ecosystem-wide governance documents (`PLAN.md`, `STATE.md`, `INDEX.md`,
+  and `docs/INDEX.md`) across `~/src/` without interfering with child git checkouts.
+
+  Architectural Context:
+  - Detached Git Store: Uses `git --git-dir=<path> --work-tree=<root>` semantics.
+  - Store Location: Default `~/.plan.git` (or `~/src/.plan.git`), configurable via `PLAN_GIT_DIR` or CLI options.
+  - Non-Interference Invariant: Strictly avoids nested `.git` collisions by never writing `.git` directories
+    into child repository workspaces (`~/src/gachi/.git`, `~/src/polytropos/.git`, etc.).
+  - Governed Documents: Exclusively tracks top-level ecosystem planning files and roadmap indexes.
+  - Ground Note [Plan Governance and Rollback Mechanics] [ref:note-plan-governance-rollback].
+
+dependencies: []
+
+packages:
+  - gachi-plan
+
+executor: agy
+model: gemini-3.1-pro-high
+skills:
+  - tricorder
+  - code-navigation
+  - contextful
+max_turns: 12
+run_budget: 600
+max_repair_attempts: 3
+
+steps:
+  - id: scaffold-gachi-plan-package
+    name: Scaffold gachi-plan package and register in workspace
+    action: |
+      1. Create `packages/gachi-plan/gachi-plan.cabal` importing cabal commons.
+      2. Register `packages/gachi-plan` in `cabal.project`.
+      3. Define initial modules:
+         - `Gachi.Plan` (re-export facade)
+         - `Gachi.Plan.Types` (algebraic data models: `PlanStore`, `PlanError`, `PlanStoreStatus`)
+         - `Gachi.Plan.Store` (detached git store lifecycle and operations)
+      4. Ensure clean compilation under `-Wall -Wcompat -Wredundant-constraints`.
+    duration: "30m"
+
+  - id: implement-detached-git-store
+    name: Implement detached git store initialization, probing, and file tracking
+    action: |
+      In `packages/gachi-plan/src/Gachi/Plan/Store.hs`:
+      1. Implement `initPlanStore :: FilePath -> FilePath -> IO (Either PlanError PlanStore)`:
+         Initializes bare git repository at store path with `git init --bare` if missing.
+      2. Implement `queryPlanStore :: PlanStore -> IO PlanStoreStatus`:
+         Queries status, head commit hash, dirty tracking state, and last commit timestamp.
+      3. Implement `listTrackedFiles :: PlanStore -> IO [FilePath]`:
+         Enumerates governed planning files (`PLAN.md`, `STATE.md`, etc.).
+      4. Ground Note [Plan Governance and Rollback Mechanics] [ref:note-plan-governance-rollback].
+    duration: "45m"
+
+  - id: add-hspec-test-suite
+    name: Implement comprehensive test suite in packages/gachi-plan/test/Main.hs
+    action: |
+      In `packages/gachi-plan/test/Main.hs`:
+      1. Test store initialization in temporary directories.
+      2. Test tracking of mock planning files without creating nested `.git` directories.
+      3. Test dirty status detection and file listing.
+      4. Verify zero dangling tagref references and zero compiler warnings.
+    duration: "30m"
+
+  - id: verify-gate
+    name: Run verification gate
+    action: |
+      Run `cabal test gachi-plan:test:tests` and execute `sh scripts/tasks/phase5-01-detached-git-store-verify.sh`.
+    duration: "10m"
+
+success_criteria:
+  - Package `packages/gachi-plan` builds warning-free under `-Wall -Wcompat -Wredundant-constraints`.
+  - Detached git store operates hermetically using `--git-dir` and `--work-tree` flags.
+  - Zero collision with child repository `.git` directories.
+  - All test assertions in `packages/gachi-plan/test/Main.hs` pass cleanly (0 failures).
+  - Note [Plan Governance and Rollback Mechanics] [ref:note-plan-governance-rollback] validated by Tagref.

@@ -5,3 +5,4 @@
 ignore_rules:
   - "bin/gachi-tagref"
   - ".githooks"
+  - "scripts/tasks"

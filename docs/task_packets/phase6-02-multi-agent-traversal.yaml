@@ -1,0 +1,74 @@
+---
+id: phase6-02-multi-agent-traversal
+title: Implement Multi-Agent Concurrent Traversal Over Osteological Graphs
+description: |
+  Implement Milestone 6.2 of Phase 6 (Lock-Free Chattering Concurrency & Graph Transformations
+  per ~/src/PLAN.md §1.A).
+  Provides a lock-free, concurrent graph traversal engine allowing multiple agent threads
+  to query, evaluate, and navigate osteological skeletal topologies simultaneously
+  without acquiring global read/write locks in `packages/gachi-core` (`Gachi.Core.Traversal`).
+
+  Architectural Context:
+  - Multi-Agent Traversal: Autonomous agent workers navigate joint-and-bone networks concurrently.
+  - Snapshot Isolation & Wait-Free Reads: Readers never block writers and writers never block readers.
+    Traversals observe consistent topological frontiers even while joint states chatter or transition.
+  - Formal Race-Freedom: Atomic reads over `AtomicJoint` states combined with immutable osteological segment
+    references guarantee memory safety without data races.
+  - Traversal Primitives:
+    - `traverseSkeletonConcurrently :: Skeleton -> (Bone -> IO a) -> IO [a]`
+    - `foldBonesConcurrently :: Skeleton -> (b -> Bone -> IO b) -> b -> IO b`
+    - `findJointPathConcurrently :: Skeleton -> JointId -> JointId -> IO (Maybe [OsteoJoint])`
+  - Ground Note [Concurrent Skeletal Graph Traversal] (tag: note-concurrent-traversal).
+
+dependencies:
+  - phase6-01-atomic-bone-machines
+
+packages:
+  - gachi-core
+
+executor: agy
+model: gemini-3.1-pro-high
+skills:
+  - tricorder
+  - code-navigation
+max_turns: 12
+run_budget: 600
+max_repair_attempts: 3
+
+steps:
+  - id: implement-traversal-engine
+    name: Implement concurrent traversal algorithms and snapshot views
+    action: |
+      In `packages/gachi-core/src/Gachi/Core/Traversal.hs`:
+      1. Define `TraversalConfig`: thread pool bounds, timeout, traversal direction (`Forward`, `Reverse`, `Bidirectional`).
+      2. Implement concurrent BFS / DFS graph walk routines traversing bones and joints:
+         - `traverseSkeletonConcurrently`
+         - `foldBonesConcurrently`
+         - `findJointPathConcurrently`
+      3. Implement snapshot views: reading joint states during concurrent chattering oscillations.
+      4. Ground Note [Concurrent Skeletal Graph Traversal] with tag `note-concurrent-traversal`.
+    duration: "45m"
+
+  - id: add-multi-agent-stress-tests
+    name: Implement multi-agent concurrency stress tests
+    action: |
+      In `packages/gachi-core/test/Main.hs`:
+      1. Build a synthetic 1,000-bone osteological skeleton.
+      2. Spawn 50 concurrent worker threads simultaneously executing traversals, path-finding queries,
+         and folds while background threads continuously trigger atomic joint state transitions.
+      3. Assert zero deadlocks, zero thread panics, and 100% traversal completion within deadlines.
+      4. Verify that concurrent traversal results match pure sequential baseline evaluations.
+    duration: "45m"
+
+  - id: verify-gate
+    name: Run verification gate
+    action: |
+      Run `cabal test gachi-core:test:tests` and execute `sh scripts/tasks/phase6-02-multi-agent-traversal-verify.sh`.
+    duration: "10m"
+
+success_criteria:
+  - `gachi-core` compiles warning-free under `-Wall -Wcompat -Wredundant-constraints`.
+  - Concurrent traversals execute with zero global locks and zero contention bottlenecks.
+  - Multi-threaded stress test with 50+ concurrent readers/writers runs deterministically without race conditions.
+  - Traversal results under concurrent joint chattering preserve topological graph consistency.
+  - Note [Concurrent Skeletal Graph Traversal] (tag: note-concurrent-traversal) grounded and validated.

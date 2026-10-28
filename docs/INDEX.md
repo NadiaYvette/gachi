@@ -23,6 +23,16 @@ Welcome to the `gachi` technical documentation corpus.
 - [`packages/gachi-scaffold/`](../packages/gachi-scaffold/) — Multi-package workspace scaffolding engine, canonical file tree synthesis, and turnkey verification harnesses.
 - [`packages/gachi-cli/`](../packages/gachi-cli/) — Unified command-line interface, project initialization wizard (`gachi init`), and ecosystem automation tool.
 - [`packages/gachi-sync/`](../packages/gachi-sync/) — Cross-repository standardization matrix, canonical shared asset catalog, repository audit engine, and differential configuration propagation (`gachi sync`).
+- [`packages/gachi-retrofit/`](../packages/gachi-retrofit/) — Diagnostic repository inspection across 6 dimensions, quantitative retrofit scoring, and progressive quality gate realization (`gachi retrofit`).
+
+## Autonomous Task Packets (`docs/task_packets/`)
+- [`phase5-01-detached-git-store.yaml`](task_packets/phase5-01-detached-git-store.yaml) — Milestone 5.1: Detached Git Store Architecture (`packages/gachi-plan`).
+- [`phase5-02-snapshot-ledger.yaml`](task_packets/phase5-02-snapshot-ledger.yaml) — Milestone 5.2: Append-Only Snapshot Ledger.
+- [`phase5-03-cli-plan-governance.yaml`](task_packets/phase5-03-cli-plan-governance.yaml) — Milestone 5.3: CLI Plan Governance Subcommands (`gachi plan` / `plan-ctl`).
+- [`phase6-01-atomic-bone-machines.yaml`](task_packets/phase6-01-atomic-bone-machines.yaml) — Milestone 6.1: Atomic Bone State Machines (`Gachi.Core.Atomic`).
+- [`phase6-02-multi-agent-traversal.yaml`](task_packets/phase6-02-multi-agent-traversal.yaml) — Milestone 6.2: Multi-Agent Concurrent Traversal.
+- [`phase6-03-dpo-graph-rewriting.yaml`](task_packets/phase6-03-dpo-graph-rewriting.yaml) — Milestone 6.3: Double-Pushout (DPO) Algebraic Graph Rewriting.
+- [`phase6-04-polytropos-coercions.yaml`](task_packets/phase6-04-polytropos-coercions.yaml) — Milestone 6.4: Polytropos Zero-Cost Coercions.
 
 ## Upstream & Ecosystem Planning
 - `~/src/PLAN.md` §1 — Parent ecosystem infrastructure mandate designating `gachi`.
