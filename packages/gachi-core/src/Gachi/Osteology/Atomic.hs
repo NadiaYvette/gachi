@@ -178,6 +178,12 @@ decodeJointState !w =
 -- without acquiring OS mutexes or runtime reader-writer locks.
 newtype AtomicJoint = AtomicJoint (BA.MutableByteArray RealWorld)
 
+instance Eq AtomicJoint where
+  AtomicJoint mba1 == AtomicJoint mba2 = BA.sameMutableByteArray mba1 mba2
+
+instance Show AtomicJoint where
+  show _ = "<AtomicJoint>"
+
 -- | Allocate a new 'AtomicJoint' initialized to the given raw 64-bit word.
 newAtomicJointRaw :: Word64 -> IO AtomicJoint
 newAtomicJointRaw !val = do

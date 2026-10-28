@@ -36,6 +36,7 @@ module Gachi.Core
     BoneId(..)
   , JointId(..)
   , Joint(..)
+  , Bone(..)
 
     -- * Skeletal Structures
   , Skeleton(..)
@@ -48,9 +49,12 @@ module Gachi.Core
   , connectJoint
   , lookupJoint
   , allBones
+  , allBonesWithId
   , allJoints
   , incidentJoints
   , sliceBones
+  , initAtomicJoints
+  , getAtomicJoint
 
     -- * Lock-Free Atomic Joint State Machine
   , module Gachi.Core.Atomic
@@ -69,6 +73,7 @@ import Gachi.Osteology
   , unsafeIndexOsteo
   , sliceOsteo
   , toListOsteo
+  , fromListOsteo
   )
 
 {- Note [Chattering Lock-Free Atomic Synchronization]
@@ -140,6 +145,12 @@ Key Structural Properties:
 newtype BoneId = BoneId { unBoneId :: Word64 }
   deriving (Eq, Ord, Show, Generic)
 
+-- | An osteological bone node comprising its unique 'BoneId' and associated payload @a@.
+data Bone a = Bone
+  { boneId      :: !BoneId
+  , bonePayload :: !a
+  } deriving (Eq, Ord, Show, Generic)
+
 -- | Strongly-typed unique identifier for a skeletal joint connection.
 newtype JointId = JointId { unJointId :: Word64 }
   deriving (Eq, Ord, Show, Generic)
@@ -163,22 +174,26 @@ data Joint = Joint
 -- See Note [Osteological Contiguous Memory Layout] [ref:note-osteology-memory-layout],
 -- Note [Chattering Lock-Free Atomic Synchronization] [ref:note-chattering-synchronization],
 -- Note [Monotonic Identifier Allocation and Contiguous Indexing] [ref:note-monotonic-id-allocation],
--- and Note [Directional Joints and Incident Traversal] [ref:note-directional-joints-traversal].
+-- Note [Directional Joints and Incident Traversal] [ref:note-directional-joints-traversal],
+-- and Note [Concurrent Skeletal Graph Traversal] [ref:note-concurrent-traversal].
 data Skeleton a = Skeleton
-  { skeletonBones  :: !(OsteoSegment a)
+  { skeletonBones        :: !(OsteoSegment a)
     -- ^ Contiguous flat primitive array storing bone payloads.
-  , skeletonJoints :: !(OsteoSegment Joint)
+  , skeletonJoints       :: !(OsteoSegment Joint)
     -- ^ Contiguous flat primitive array storing skeletal joints.
-  , skeletonNextId :: !Word64
+  , skeletonNextId       :: !Word64
     -- ^ Monotonically increasing identifier counter for next bone allocation.
+  , skeletonAtomicJoints :: !(OsteoSegment AtomicJoint)
+    -- ^ Contiguous primitive array storing atomic references for lock-free joint state transitions.
   } deriving (Eq, Show, Generic)
 
 -- | Create an empty skeletal structure with zero bones and zero joints.
 emptySkeleton :: Skeleton a
 emptySkeleton = Skeleton
-  { skeletonBones  = emptySegment
-  , skeletonJoints = emptySegment
-  , skeletonNextId = 0
+  { skeletonBones        = emptySegment
+  , skeletonJoints       = emptySegment
+  , skeletonNextId       = 0
+  , skeletonAtomicJoints = emptySegment
   }
 
 -- | Count the total number of bones currently assembled in the skeleton.
@@ -275,3 +290,24 @@ incidentJoints bid skel =
 -- See Note [Zero-Copy Sub-Segment Slicing] [ref:note-zero-copy-slicing].
 sliceBones :: Int -> Int -> Skeleton a -> Maybe (OsteoSegment a)
 sliceBones off len skel = sliceOsteo off len (skeletonBones skel)
+
+-- | Extract all bone nodes paired with their monotonically assigned 'BoneId' handles.
+allBonesWithId :: Skeleton a -> [Bone a]
+allBonesWithId skel =
+  let n = totalBones skel
+  in [ Bone (BoneId (fromIntegral i)) (unsafeLookupBone (BoneId (fromIntegral i)) skel)
+     | i <- [0 .. n - 1]
+     ]
+
+-- | Initialize atomic joint state references for all joints in a skeleton.
+initAtomicJoints :: Skeleton a -> IO (Skeleton a)
+initAtomicJoints skel = do
+  let n = totalJoints skel
+  refs <- mapM (\_ -> newAtomicJoint JointInert) [0 .. n - 1]
+  pure $! skel { skeletonAtomicJoints = fromListOsteo refs }
+
+-- | Retrieve the atomic joint reference for a given 'JointId', if initialized.
+getAtomicJoint :: JointId -> Skeleton a -> Maybe AtomicJoint
+getAtomicJoint (JointId w) skel =
+  indexOsteo (fromIntegral w) (skeletonAtomicJoints skel)
+{-# INLINE getAtomicJoint #-}
