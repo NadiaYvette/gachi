@@ -167,16 +167,46 @@ allProjectEntries proj =
 -- 1. Root Toolchain & Build Assets
 --------------------------------------------------------------------------------
 
--- | Synthesizes root build configuration files: @cabal.project@,
+-- | Synthesizes root build configuration files: @.gitignore@, @cabal.project@,
 -- @cabal.project.local.example@, @.hlint.yaml@, @.gitmessage@, and @tagref.yml@.
 rootToolchainEntries :: Project -> [FileEntry]
 rootToolchainEntries proj =
-  [ FileEntry "cabal.project" (cabalProjectTemplate proj) False
+  [ FileEntry ".gitignore" gitignoreTemplate False
+  , FileEntry "cabal.project" (cabalProjectTemplate proj) False
   , FileEntry "cabal.project.local.example" cabalProjectLocalTemplate False
   , FileEntry ".hlint.yaml" hlintTemplate False
   , FileEntry ".gitmessage" gitmessageTemplate False
   , FileEntry "tagref.yml" (tagrefConfigTemplate proj) False
   ]
+
+-- | Generates standard @.gitignore@ for multi-package Haskell projects.
+gitignoreTemplate :: Text
+gitignoreTemplate = T.unlines
+  [ "dist/"
+  , "dist-*"
+  , "dist-newstyle/"
+  , ".ghc.environment.*"
+  , "*.o"
+  , "*.hi"
+  , "*.dyn_o"
+  , "*.dyn_hi"
+  , "*.a"
+  , "*.so"
+  , "*.dylib"
+  , "tags"
+  , ".ok"
+  , ".keiro/"
+  , ".yamaarashi/"
+  , ".contextful/"
+  , ".freebuff/"
+  , "cabal.project.local"
+  , "cabal.project.local*"
+  , ".DS_Store"
+  , "*~"
+  , "*.swp"
+  , "*.swo"
+  ]
+
 
 -- | Generates root @cabal.project@ configuring compiler pinning and warnings.
 cabalProjectTemplate :: Project -> Text
@@ -1108,6 +1138,9 @@ packageCabalTemplate proj pkg =
     T.unlines
     [ "  hs-source-dirs: src"
     , "  default-language: Haskell2010"
+    , "  default-extensions:"
+    , "    OverloadedStrings"
+    , "    DerivingStrategies"
     , "  ghc-options: -Wall -Wcompat -Wredundant-constraints"
     , "  build-depends:"
     , "    base >= 4.14 && < 5,"
@@ -1119,6 +1152,9 @@ packageCabalTemplate proj pkg =
     , "  main-is: Main.hs"
     , "  hs-source-dirs: test"
     , "  default-language: Haskell2010"
+    , "  default-extensions:"
+    , "    OverloadedStrings"
+    , "    DerivingStrategies"
     , "  ghc-options: -Wall"
     , "  build-depends:"
     , "    base >= 4.14 && < 5,"

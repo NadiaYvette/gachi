@@ -110,7 +110,8 @@ main = hspec $ do
       let entries = generateProjectScaffold gongjuFixture
           paths = map entryPath entries
       paths `shouldContain`
-        [ "cabal.project"
+        [ ".gitignore"
+        , "cabal.project"
         , "cabal.project.local.example"
         , ".hlint.yaml"
         , ".gitmessage"
