@@ -201,6 +201,7 @@ gitignoreTemplate = T.unlines
   , ".freebuff/"
   , "cabal.project.local"
   , "cabal.project.local*"
+  , "!cabal.project.local.example"
   , ".DS_Store"
   , "*~"
   , "*.swp"
