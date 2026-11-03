@@ -30,8 +30,8 @@
 --
 -- 2. __Differential Scan & Plan Construction:__
 --    Evaluates each target checkout against the 9-dimensional canonical matrix
---    ('canonicalMatrix'), computing a pure 'SyncPlan' that categorizes every asset
---    into 'ActionCreate', 'ActionUpdate', 'ActionChmod', or 'ActionNoOp'.
+--    ('canonicalMatrix'), computing a pure 't:Gachi.Sync.Engine.SyncPlan' that categorizes every asset
+--    into @ActionCreate@, @ActionUpdate@, @ActionChmod@, or @ActionNoOp@.
 --
 -- 3. __Execution Mode Enforcement:__
 --    * __'DryRun' (@--dry-run@):__ Emits ASCII audit tables detailing proposed
@@ -95,7 +95,7 @@ import Gachi.Sync
 -- 1. High-Level Subcommand Runner
 --------------------------------------------------------------------------------
 
--- | Executes the @gachi sync@ subcommand from parsed 'SyncOptions'.
+-- | Executes the @gachi sync@ subcommand from parsed 't:SyncOptions'.
 --
 -- === Dispatch Strategy & Flags
 --

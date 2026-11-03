@@ -15,11 +15,11 @@
 -- domain logic source files (@src/@, @app/@, @lib/@).
 --
 -- To achieve this safely, the diagnostic analyzer produces a strongly-typed
--- 'DiagnosticReport' assessing six orthogonal quality and structural dimensions:
+-- 't:DiagnosticReport' assessing six orthogonal quality and structural dimensions:
 --
 -- 1. __Language Stacks & Distributions:__
 --    Classifies discovered source code files into recognized language families ('Language')
---    and computes aggregate file counts and proportions ('LanguageStats'). Identifies the
+--    and computes aggregate file counts and proportions ('t:LanguageStats'). Identifies the
 --    dominant language informing toolchain decisions.
 --
 -- 2. __Build Systems & Topographical Layout:__
@@ -29,23 +29,23 @@
 --
 -- 3. __Test Infrastructure & Frameworks:__
 --    Detects test directories, declared test targets, and testing libraries ('TestFramework',
---    'TestSuiteInfo', 'TestInfrastructure'). Distinguishes active verification setups from
+--    't:TestSuiteInfo', 't:TestInfrastructure'). Distinguishes active verification setups from
 --    untested codebases.
 --
 -- 4. __Documentation Gaps Relative to DOC_STRATEGY.md:__
 --    Audits repository assets against canonical documentation genres ('DocCategory',
---    'DocSeverity', 'DocGap') per @DOC_STRATEGY.md@ §1, identifying missing orientation,
+--    'DocSeverity', 't:DocGap') per @DOC_STRATEGY.md@ §1, identifying missing orientation,
 --    corpus inventory, design rationale, and operational manuals.
 --
 -- 5. __Git Governance, Hook Executability & AI Attribution:__
 --    Audits @.git@ directory existence, @core.hooksPath@ configuration, @commit-msg@ hook
 --    executability, Sarutahiko / RFC 2822 @Assisted-by:@ trailer validation, @pre-commit@
---    gates, and @.gitmessage@ commit template pinning ('GitGovernanceStatus').
+--    gates, and @.gitmessage@ commit template pinning ('t:GitGovernanceStatus').
 --
 -- 6. __Physical Verification Harnesses & Quality Gates:__
 --    Evaluates turnkey test runners (@bin/*-verify@), Tagref cross-reference configuration,
 --    Markdown link integrity checkers, and CLOC comment density audit harnesses
---    ('VerificationHarnessStatus').
+--    ('t:VerificationHarnessStatus').
 --
 -- = The Six Evaluation Dimensions
 --

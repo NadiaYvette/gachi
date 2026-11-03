@@ -433,7 +433,7 @@ detectBuildSystems _root paths =
 --    - 'FrameworkCargoTest': Built-in Rust test attributes.
 --    - 'FrameworkPytest': Python pytest framework.
 --
--- Returns a 'TestInfrastructure' record containing test directories, file counts, and
+-- Returns a 't:TestInfrastructure' record containing test directories, file counts, and
 -- identified frameworks.
 detectTestInfrastructure :: FilePath -> [FilePath] -> [BuildSystem] -> IO TestInfrastructure
 detectTestInfrastructure root paths _buildSystems = do
@@ -874,7 +874,7 @@ inferProjectName root _builds paths =
 --------------------------------------------------------------------------------
 
 -- | Analyzes an arbitrary target repository checkout, evaluating all six diagnostic
--- dimensions and synthesizing a comprehensive 'DiagnosticReport'.
+-- dimensions and synthesizing a comprehensive 't:DiagnosticReport'.
 --
 -- This operation is strictly read-only and non-destructive:
 -- * Zero filesystem mutations occur on the target directory.

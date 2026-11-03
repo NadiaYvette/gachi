@@ -53,7 +53,7 @@
 --
 -- * __Milestone 4.1 (Diagnostic Repository Inspector):__
 --   Strictly observational, read-only static analysis. Evaluates the target repository across
---   six orthogonal dimensions, producing a strongly typed 'DiagnosticReport' and quantitative
+--   six orthogonal dimensions, producing a strongly typed 't:DiagnosticReport' and quantitative
 --   retrofit readiness score \(S(P) \in [0.0, 100.0]\).
 --
 -- * __Milestone 4.2 (Non-Destructive Skeleton Overlay):__

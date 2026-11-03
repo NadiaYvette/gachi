@@ -25,21 +25,21 @@
 --    Supports declarative Dhall files (@--config FILE@), CLI flag overrides, and
 --    an interactive step-by-step terminal wizard (@--interactive@ / @-i@).
 --
--- 2. __Harmonic Configuration Propagation ('sync'):__
+-- 2. __Harmonic Configuration Propagation (@sync@):__
 --    Propagates unified toolchain pins, linters, pre-commit hooks, and verification
 --    harnesses across heterogeneous repositories (Phase 3). Evaluates differential
 --    changes using a bidirectional merge strategy without manual editing.
 --
--- 3. __Non-Destructive Codebase Retrofitting ('retrofit'):__
+-- 3. __Non-Destructive Codebase Retrofitting (@retrofit@):__
 --    Migrates legacy or non-standard Haskell repositories into the canonical Gachi
 --    multi-package workspace layout (Phase 4). Preserves existing business logic while
 --    inserting the universal verification infrastructure.
 --
--- 4. __Roadmap & Snapshot Governance ('plan'):__
+-- 4. __Roadmap & Snapshot Governance (@plan@):__
 --    Interacts with detached Git storage and immutable ledger checkpoints (Phase 5).
 --    Maintains atomic session states, branch histories, and multi-step rollbacks.
 --
--- 5. __Version & Toolchain Diagnostics ('version'):__
+-- 5. __Version & Toolchain Diagnostics (@version@):__
 --    Emits detailed build metadata, including active GHC compiler pinning (GHC 9.14.1),
 --    Cabal specification target (Cabal 3.18), and licensing status (EUPL-1.2).
 --
@@ -286,7 +286,7 @@ mainParser = hsubparser
 -- 4. Subcommand Parsers
 --------------------------------------------------------------------------------
 
--- | Applicative parser for 'InitOptions'.
+-- | Applicative parser for 't:InitOptions'.
 --
 -- Assembles options governing the 'gachi init' subcommand:
 -- * Positional argument: Optional project identifier slug (e.g. @"gongju"@).
@@ -368,7 +368,7 @@ initOptionsParser = InitOptions
        <> help "Interactively prompt for missing configuration values"
         )
 
--- | Applicative parser for 'SyncOptions'.
+-- | Applicative parser for 't:SyncOptions'.
 --
 -- Parses flags for cross-repository configuration synchronization (Phase 3):
 -- * Target repository directory (@--target@ / @-t@).
@@ -399,7 +399,7 @@ syncOptionsParser = SyncOptions
        <> help "Audit and synchronize git remote replication topology"
         )
 
--- | Applicative parser for 'DoctorOptions'.
+-- | Applicative parser for 't:DoctorOptions'.
 --
 -- Parses flags for workspace diagnostics and cellular sheaf coherence auditing (Milestone 3.5):
 -- * Target repository directory (@--target@ / @-t@).
@@ -426,7 +426,7 @@ doctorOptionsParser = DoctorOptions
        <> help "Audit all discovered ecosystem repositories across the parent directory"
         )
 
--- | Applicative parser for 'RetrofitOptions'.
+-- | Applicative parser for 't:RetrofitOptions'.
 --
 -- Parses flags for non-destructive legacy codebase migration (Phase 4):
 -- * Target codebase directory (@--target@ / @-t@).
@@ -451,7 +451,7 @@ retrofitOptionsParser = RetrofitOptions
        <> help "Format diagnostic inspection report as GitHub-Flavored Markdown"
         )
 
--- | Applicative parser for 'PlanOptions'.
+-- | Applicative parser for 't:PlanOptions'.
 --
 -- Parses commands and arguments for detached Git state store management (Phase 5):
 -- * Action subcommand (@checkpoint@, @diff@, @log@, @rollback@).

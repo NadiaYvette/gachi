@@ -5,7 +5,7 @@
 -- | Module: Gachi.Retrofit.Report
 -- Description: Diagnostic report formatting and pretty-printing
 --
--- This module renders 'DiagnosticReport' data structures into aligned ASCII terminal
+-- This module renders 't:DiagnosticReport' data structures into aligned ASCII terminal
 -- dashboards, GitHub-Flavored Markdown documents, and compact single-line summaries.
 --
 -- = Architectural Context & Invariants
@@ -62,7 +62,7 @@ import Gachi.Retrofit.Types
 -- 1. ASCII Terminal Dashboard Formatting
 --------------------------------------------------------------------------------
 
--- | Formats a 'DiagnosticReport' as an aligned ASCII terminal dashboard.
+-- | Formats a 't:DiagnosticReport' as an aligned ASCII terminal dashboard.
 --
 -- Renders an 80-column summary dashboard presenting:
 -- * Workspace identity, primary language, layout classification, and build tools.

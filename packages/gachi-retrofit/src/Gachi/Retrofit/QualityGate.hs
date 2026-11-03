@@ -204,7 +204,7 @@ data GateCheck = GateCheck
     -- the gate passes, 'False' otherwise. Must be strictly non-destructive.
   }
 
--- | Display-friendly instance for 'GateCheck' (omits the evaluator function).
+-- | Display-friendly instance for 't:GateCheck' (omits the evaluator function).
 instance Show GateCheck where
   show gc = "GateCheck { gateName = " ++ show (gateName gc)
          ++ ", gateLevel = " ++ show (gateLevel gc)
@@ -574,7 +574,7 @@ computeAchievedLevel results
 
 -- | Generates prioritized remediation steps from failing gate results.
 --
--- Each failing gate is translated into an actionable 'RemediationStep' with
+-- Each failing gate is translated into an actionable 't:RemediationStep' with
 -- the appropriate priority classification and a suggested command. Steps are
 -- ordered by ascending quality level (foundation first, analysis last).
 computeRemediationSteps :: [GateResult] -> [RemediationStep]
@@ -618,7 +618,7 @@ computeRemediationSteps = concatMap stepFromResult . filter (not . resultPassed)
       | otherwise                              = "Review and address: " <> name
 
 -- | Evaluates all quality gates against the target repository and produces
--- a comprehensive 'QualityGateReport'.
+-- a comprehensive 't:QualityGateReport'.
 --
 -- === Evaluation Workflow
 --
@@ -658,7 +658,7 @@ evaluateQualityGates root = do
 -- 6. Pretty-Printing & Dashboards
 --------------------------------------------------------------------------------
 
--- | Formats a 'QualityGateReport' as an 80-column aligned ASCII terminal dashboard.
+-- | Formats a 't:QualityGateReport' as an 80-column aligned ASCII terminal dashboard.
 --
 -- Features boxed section headers, Unicode progress indicators, per-level gate
 -- checklists with pass/fail markers, and a prioritized remediation action plan.
@@ -741,7 +741,7 @@ formatQualityGateReport rpt = T.unlines $
       "   " <> T.pack (show n) <> ". [" <> remediationPriorityName (stepPriority step) <> "] "
       <> stepGateName step <> ": " <> stepCommand step
 
--- | Formats a 'QualityGateReport' as a GitHub-Flavored Markdown document.
+-- | Formats a 't:QualityGateReport' as a GitHub-Flavored Markdown document.
 --
 -- Produces structured markdown with heading hierarchy, GFM tables for gate results,
 -- and an actionable remediation checklist. Suitable for @QUALITY_REPORT.md@ or

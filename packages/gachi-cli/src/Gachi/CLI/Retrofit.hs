@@ -19,7 +19,7 @@
 -- The retrofitting execution lifecycle unfolds in two stages:
 --
 -- 1. __Diagnostic Inspection (Milestone 4.1):__
---    Executes the comprehensive 'DiagnosticReport' scanner, evaluating:
+--    Executes the comprehensive 't:Gachi.Retrofit.DiagnosticReport' scanner, evaluating:
 --    - Programming language distribution and file percentages.
 --    - Build tool manifests and workspace topography.
 --    - Test infrastructure and declared test suites.
@@ -28,8 +28,8 @@
 --    - Physical verification harnesses and quality gates.
 --
 -- 2. __Non-Destructive Overlay (Milestone 4.2):__
---    Computes the 'OverlayPlan', categorizing missing standardized assets as 'ActionCreate'
---    and pre-existing files as 'ActionPreserve'. In live execution mode, writes missing
+--    Computes the 't:Gachi.Retrofit.OverlayPlan', categorizing missing standardized assets as @ActionCreate@
+--    and pre-existing files as @ActionPreserve@. In live execution mode, writes missing
 --    documentation, agent rules, Git hooks, and verification runners with executable permissions
 --    and configures Git governance without touching domain source files.
 --
@@ -88,7 +88,7 @@ import Gachi.Retrofit
 -- 1. High-Level Subcommand Runner
 --------------------------------------------------------------------------------
 
--- | Executes the @gachi retrofit@ subcommand from parsed 'RetrofitOptions'.
+-- | Executes the @gachi retrofit@ subcommand from parsed 't:RetrofitOptions'.
 --
 -- === Execution Steps
 --

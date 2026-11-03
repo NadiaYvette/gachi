@@ -29,7 +29,7 @@
 --
 -- 2. __Pure Plan Construction:__
 --    The overlay computation phase ('computeOverlayPlan') is completely decoupled from
---    filesystem side effects. It produces an explicit, inspectable 'OverlayPlan'
+--    filesystem side effects. It produces an explicit, inspectable 't:OverlayPlan'
 --    categorizing every canonical asset into 'ActionCreate' or 'ActionPreserve'.
 --
 -- 3. __Turnkey Verification Harness Delivery:__
@@ -232,7 +232,7 @@ data OverlayPlan = OverlayPlan
     -- ^ Total count of pre-existing files preserved untouched.
   } deriving stock (Eq, Show, Generic)
 
--- | Concrete outcome and statistics from executing an 'OverlayPlan' on disk.
+-- | Concrete outcome and statistics from executing an 't:OverlayPlan' on disk.
 data OverlayResult = OverlayResult
   { resultTargetDir      :: !FilePath
     -- ^ Destination repository directory.
@@ -581,7 +581,7 @@ computeOverlayPlan targetDir report = do
 -- 5. Overlay Plan Execution
 --------------------------------------------------------------------------------
 
--- | Executes an 'OverlayPlan' on disk, writing missing standardized assets, setting
+-- | Executes an 't:OverlayPlan' on disk, writing missing standardized assets, setting
 -- executable bits, and configuring Git governance.
 --
 -- Strictly adheres to Note [Non-Destructive Skeleton Overlay] [ref:note-nondestructive-retrofit]:
@@ -653,7 +653,7 @@ overlayRepository targetDir isDryRun report = do
 -- 6. Formatting & Pretty-Printing
 --------------------------------------------------------------------------------
 
--- | Formats an 80-column boxed ASCII preview of an 'OverlayPlan'.
+-- | Formats an 80-column boxed ASCII preview of an 't:OverlayPlan'.
 formatOverlayPlan :: OverlayPlan -> Text
 formatOverlayPlan plan =
   let created = [a | a <- planActions plan, actionType a == ActionCreate]
@@ -691,7 +691,7 @@ formatOverlayPlan plan =
                 ]
              ++ [ "" ]
 
--- | Formats a GitHub-Flavored Markdown summary table of an 'OverlayPlan'.
+-- | Formats a GitHub-Flavored Markdown summary table of an 't:OverlayPlan'.
 formatOverlayPlanMarkdown :: OverlayPlan -> Text
 formatOverlayPlanMarkdown plan =
   T.unlines $

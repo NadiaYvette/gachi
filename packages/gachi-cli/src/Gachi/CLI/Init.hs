@@ -29,8 +29,8 @@
 --    interactive wizardry for rapid prototyping.
 --
 -- 2. Non-Destructive Safety:
---    File materialization is governed by explicit execution modes ('FailOnExisting',
---    'SkipExisting', 'OverwriteExisting'). The default mode is 'FailOnExisting' to prevent
+--    File materialization is governed by explicit execution modes (@FailOnExisting@,
+--    @SkipExisting@, @OverwriteExisting@). The default mode is @FailOnExisting@ to prevent
 --    accidental data loss. Dry-run mode (`--dry-run`) previews all file paths, sizes,
 --    and permissions without touching the filesystem.
 --
@@ -157,7 +157,7 @@ handleScaffold proj targetDir opts =
 -- 2. Project Specification Resolution
 --------------------------------------------------------------------------------
 
--- | Resolves a strongly-typed 'Project' specification and target destination directory.
+-- | Resolves a strongly-typed 't:Project' specification and target destination directory.
 --
 -- Evaluates initialization configuration across three strictly prioritized channels:
 --
@@ -165,7 +165,7 @@ handleScaffold proj targetDir opts =
 --    Evaluates a user-supplied Dhall specification file on disk via 'decodeProjectFile'.
 --    Relative schema imports are resolved hermetically relative to the file.
 --    Any command-line flags provided simultaneously (@--author-name@, @--desc@, etc.)
---    are overlaid as overrides onto the resulting 'Project'.
+--    are overlaid as overrides onto the resulting 't:Project'.
 --
 -- 2. __Interactive Wizard (@--interactive@ / @-i@):__
 --    Launches a friendly interactive terminal dialogue prompting for missing or
@@ -173,7 +173,7 @@ handleScaffold proj targetDir opts =
 --
 -- 3. __CLI Flags & Ambient Defaults:__
 --    When neither a configuration file nor interactive mode is specified, synthesizes
---    a canonical 'Project' using 'defaultProject', reading ambient Git author metadata
+--    a canonical 't:Project' using 'defaultProject', reading ambient Git author metadata
 --    and applying CLI overrides.
 --
 -- Returns 'Left error' on missing configuration files or decoding failure, or
@@ -207,13 +207,13 @@ resolveProject opts = case initConfigFile opts of
               Nothing -> T.unpack pName
         pure (Right (proj, targetDir))
 
--- | Overlays optional CLI command-line flags onto an existing 'Project' record.
+-- | Overlays optional CLI command-line flags onto an existing 't:Project' record.
 --
 -- Merges CLI flag inputs into the baseline specification according to precedence:
--- * 'initProjectName': Updates canonical project slug 'name' if provided.
+-- * 'initProjectName': Updates canonical project slug @name@ if provided.
 -- * 'initDescription': Overrides 'description' if specified.
 -- * 'initAuthorName' / 'initAuthorEmail': Overlays contact fields onto 'author'.
--- * 'initPackages': Replaces package list with new 'PackageSpec' records when non-empty.
+-- * 'initPackages': Replaces package list with new 't:PackageSpec' records when non-empty.
 --
 -- Preserves all non-overridden fields (such as pinned toolchain versions, licenses,
 -- and git remote mirrors).
@@ -330,7 +330,7 @@ promptUser label defVal = do
 --   and executable permission flags without performing any disk mutations.
 -- * __Materialization Mode ('initDryRun' is False):__
 --   Creates the destination directory tree, writes files according to 'initMode'
---   ('FailOnExisting', 'SkipExisting', or 'OverwriteExisting'), initializes Git
+--   (@FailOnExisting@, @SkipExisting@, or @OverwriteExisting@), initializes Git
 --   governance unless disabled via 'initNoGit', and outputs the quick-start guide.
 --
 -- Returns 'ExitSuccess' upon successful execution, or raises 'ScaffoldError'.

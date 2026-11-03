@@ -74,7 +74,7 @@ import Gachi.Sync.Sheaf
 
 -- | Main execution entry point for 'gachi doctor'.
 --
--- Dispatches based on 'DoctorOptions':
+-- Dispatches based on 't:DoctorOptions':
 --
 -- * When @--all@ / @-a@ is specified: Executes whole-ecosystem cellular sheaf
 --   coherence auditing across all discovered checkouts in the parent directory.
@@ -108,8 +108,8 @@ runDoctor opts = do
 
 -- | Executes 1-D cellular sheaf cohomology auditing and formats results.
 --
--- When 'isEcosystem' is 'True', iterates over all checkouts discovered via
--- 'discoverEcosystemRepositories'. Otherwise, inspects a single target repository.
+-- When @isEcosystem@ is 'True', iterates over all checkouts discovered via
+-- 'Gachi.Sync.Engine.discoverEcosystemRepositories'. Otherwise, inspects a single target repository.
 runSheafAudit :: FilePath -> Bool -> IO ExitCode
 runSheafAudit targetPath isEcosystem = do
   isDir <- doesDirectoryExist targetPath

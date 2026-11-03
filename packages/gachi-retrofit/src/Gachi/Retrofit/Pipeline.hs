@@ -14,7 +14,7 @@ License     : EUPL-1.2
 Maintainer  : nadia.yvette.chambers@ik.me
 
 Orchestrates the multi-stage codebase retrofitting workflow as an extensible
-Penelope polycategorical arrow pipeline ('PenelopeRope'):
+Penelope polycategorical arrow pipeline ('t:PenelopeRope'):
 
 1. Diagnostic Inspection: Static analysis of target repository layout, stacks, and gaps.
 2. Candidate & Plan Synthesis: Non-destructive overlay plan synthesis.
@@ -104,12 +104,12 @@ simulationStrand = arr $ \ctx ->
 sandboxValidationStrand :: RetrofitPipeline (RetrofitContext, OverlayResult) OverlayResult
 sandboxValidationStrand = arr snd
 
--- | Composes the pure stages into an end-to-end Penelope 'Rope' arrow pipeline.
+-- | Composes the pure stages into an end-to-end Penelope 't:Gargamelle.Effect.PenelopeRope' arrow pipeline.
 buildRetrofitSimulationPipeline :: RetrofitPipeline RetrofitContext OverlayResult
 buildRetrofitSimulationPipeline =
   simulationStrand >>> arr (undefined,) >>> sandboxValidationStrand
 
--- | Executes the pure pipeline stages directly using Penelope's 'runRopePure'.
+-- | Executes the pure pipeline stages directly using Penelope's 'Penelope.Effects.Binary.runRopePure'.
 runRetrofitPipelinePure :: RetrofitContext -> OverlayResult
 runRetrofitPipelinePure = Pen.runRopePure simulationStrand
 
