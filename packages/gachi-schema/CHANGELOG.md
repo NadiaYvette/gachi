@@ -1,0 +1,7 @@
+# Changelog for gachi-schema
+
+## 0.1.0.0 — Initial Release
+
+- Declarative Dhall schemas and polytropos-dhall deserializers.
+- Project configuration types and schema validation.
+- Ecosystem standardization schema specifications.

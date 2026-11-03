@@ -74,8 +74,11 @@ module Gachi.Scaffold.Templates
     -- * Package Asset Templates
   , packageCabalTemplate
   , packageReadmeTemplate
+  , packageLicenseTemplate
+  , packageChangelogTemplate
   , packageModuleTemplate
   , packageTestTemplate
+  , licenseTemplate
 
     -- * String & Path Utilities
   , defaultModuleName
@@ -161,6 +164,7 @@ allProjectEntries proj =
     , agentRuleEntries proj
     , documentationCorpusEntries proj
     , packageHierarchyEntries proj
+    , licensingEntries proj
     ]
 
 --------------------------------------------------------------------------------
@@ -711,6 +715,34 @@ operationalGovernanceEntries proj =
   , FileEntry "STATE.md" (stateTemplate proj) False
   ]
 
+-- | Synthesizes root @LICENSE@ and @LICENSES/@ files.
+licensingEntries :: Project -> [FileEntry]
+licensingEntries proj =
+  [ FileEntry "LICENSE" (licenseTemplate proj) False
+  , FileEntry ("LICENSES/" <> T.unpack (projectLicense proj) <> ".txt") (licenseTemplate proj) False
+  ]
+
+-- | Generates standard LICENSE text (EUPL-1.2 notice).
+licenseTemplate :: Project -> Text
+licenseTemplate proj =
+  let auth = projectAuthor proj
+  in T.unlines
+    [ "European Union Public Licence v. 1.2"
+    , "EUPL © the European Union 2007, 2016"
+    , ""
+    , "Copyright (c) 2026 " <> authorName auth <> " <" <> authorEmail auth <> ">"
+    , ""
+    , "This European Union Public Licence (the 'EUPL') applies to the Work which is"
+    , "provided under the terms of this Licence. Any use of the Work, other than as"
+    , "authorised under this Licence is prohibited (to the extent such use is covered"
+    , "by a right of the copyright holder of the Work)."
+    , "The Work is provided under the terms of this Licence when the Licensor has"
+    , "placed the following notice immediately following the copyright notice for"
+    , "the Work:"
+    , "                      Licensed under the EUPL"
+    , "or has expressed by any other means their willingness to license under the EUPL."
+    ]
+
 -- | Generates root @README.md@ describing project overview, build steps, and licenses.
 readmeTemplate :: Project -> Text
 readmeTemplate proj =
@@ -1098,6 +1130,8 @@ packageEntries proj pkg =
   let pName = T.unpack (packageName pkg)
       cabalFile = "packages/" <> pName <> "/" <> pName <> ".cabal"
       readmeFile = "packages/" <> pName <> "/README.md"
+      licenseFile = "packages/" <> pName <> "/LICENSE"
+      changelogFile = "packages/" <> pName <> "/CHANGELOG.md"
       testFile = "packages/" <> pName <> "/test/Main.hs"
       exposes = case packageExposes pkg of
         [] -> [defaultModuleName (packageName pkg)]
@@ -1111,10 +1145,12 @@ packageEntries proj pkg =
         ]
   in [ FileEntry cabalFile (packageCabalTemplate proj pkg) False
      , FileEntry readmeFile (packageReadmeTemplate proj pkg) False
+     , FileEntry licenseFile (packageLicenseTemplate proj) False
+     , FileEntry changelogFile (packageChangelogTemplate proj pkg) False
      , FileEntry testFile (packageTestTemplate proj pkg) False
      ] ++ moduleFiles
 
--- | Generates a package's Cabal manifest.
+-- | Generates a package's Cabal manifest adhering strictly to Hackage upload standards.
 packageCabalTemplate :: Project -> PackageSpec -> Text
 packageCabalTemplate proj pkg =
   let pName = packageName pkg
@@ -1127,11 +1163,25 @@ packageCabalTemplate proj pkg =
     , "name: " <> pName
     , "version: 0.1.0.0"
     , "synopsis: " <> packageSynopsis pkg
+    , "description:"
+    , "  " <> packageSynopsis pkg <> " for the " <> projectName proj <> " ecosystem."
     , "license: " <> projectLicense proj
+    , "license-file: LICENSE"
     , "author: " <> authorName auth
     , "maintainer: " <> authorEmail auth
+    , "category: Development"
+    , "homepage: https://github.com/NadiaYvette/" <> projectName proj
+    , "bug-reports: https://github.com/NadiaYvette/" <> projectName proj <> "/issues"
+    , "extra-doc-files:"
+    , "  README.md"
+    , "  CHANGELOG.md"
     , "build-type: Simple"
     , "tested-with: GHC == " <> projectGhcVersion proj
+    , ""
+    , "source-repository head"
+    , "  type: git"
+    , "  location: https://github.com/NadiaYvette/" <> projectName proj
+    , "  subdir: packages/" <> pName
     , ""
     , "library"
     , "  exposed-modules:"
@@ -1145,8 +1195,8 @@ packageCabalTemplate proj pkg =
     , "  ghc-options: -Wall -Wcompat -Wredundant-constraints"
     , "  build-depends:"
     , "    base >= 4.14 && < 5,"
-    , "    text >= 2.0,"
-    , "    containers >= 0.6"
+    , "    text >= 2.0 && < 2.2,"
+    , "    containers >= 0.6 && < 0.9"
     , ""
     , "test-suite tests"
     , "  type: exitcode-stdio-1.0"
@@ -1156,12 +1206,30 @@ packageCabalTemplate proj pkg =
     , "  default-extensions:"
     , "    OverloadedStrings"
     , "    DerivingStrategies"
-    , "  ghc-options: -Wall"
+    , "  ghc-options: -Wall -Wcompat -Wredundant-constraints -threaded"
     , "  build-depends:"
     , "    base >= 4.14 && < 5,"
     , "    " <> pName <> ","
-    , "    text >= 2.0,"
-    , "    hspec >= 2.10"
+    , "    text >= 2.0 && < 2.2,"
+    , "    containers >= 0.6 && < 0.9,"
+    , "    hspec >= 2.10 && < 2.12"
+    ]
+
+-- | Generates a package's @LICENSE@ file.
+packageLicenseTemplate :: Project -> Text
+packageLicenseTemplate = licenseTemplate
+
+-- | Generates a package's @CHANGELOG.md@.
+packageChangelogTemplate :: Project -> PackageSpec -> Text
+packageChangelogTemplate _proj pkg =
+  let pName = packageName pkg
+  in T.unlines
+    [ "# Changelog for " <> pName
+    , ""
+    , "## 0.1.0.0 — Initial Release"
+    , ""
+    , "- Initial release of " <> pName <> "."
+    , "- " <> packageSynopsis pkg
     ]
 
 -- | Generates a package's @README.md@.

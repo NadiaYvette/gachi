@@ -107,8 +107,11 @@ module Gachi.Scaffold
   , docsCommitAttributionTemplate
   , packageCabalTemplate
   , packageReadmeTemplate
+  , packageLicenseTemplate
+  , packageChangelogTemplate
   , packageModuleTemplate
   , packageTestTemplate
+  , licenseTemplate
 
     -- * Markdown AST & Pretty-Printing
   , Block(..)
@@ -199,9 +202,12 @@ import Gachi.Scaffold.Templates
   , linkcheckScriptTemplate
   , moduleToFilePath
   , packageCabalTemplate
+  , packageLicenseTemplate
+  , packageChangelogTemplate
   , packageModuleTemplate
   , packageReadmeTemplate
   , packageTestTemplate
+  , licenseTemplate
   , planTemplate
   , preCommitHookTemplate
   , readmeTemplate

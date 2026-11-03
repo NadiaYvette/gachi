@@ -171,6 +171,8 @@ main = hspec $ do
       forM_
         [ "packages/gongju-core/gongju-core.cabal"
         , "packages/gongju-core/README.md"
+        , "packages/gongju-core/LICENSE"
+        , "packages/gongju-core/CHANGELOG.md"
         , "packages/gongju-core/src/Gongju/Core.hs"
         , "packages/gongju-core/src/Gongju/TypeLevel.hs"
         , "packages/gongju-core/test/Main.hs"
