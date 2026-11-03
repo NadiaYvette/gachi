@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: gachi-plan
-version: 0.1.0.0
+version: 0.1.0.1
 synopsis: Isolated detached Git store and ledger for ecosystem plan governance
 description:
   Implements Milestone 5.1 of Phase 5 (Ecosystem Plan Governance & Rollback

@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: gachi-cli
-version: 0.1.0.0
+version: 0.1.0.1
 synopsis: Unified command-line interface for the gachi ecosystem engine
 description:
   Turnkey command-line interface providing declarative project initialization

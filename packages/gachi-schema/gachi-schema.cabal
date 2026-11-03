@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: gachi-schema
-version: 0.1.0.0
+version: 0.1.0.1
 synopsis: Declarative Dhall schemas and polytropos-dhall deserializers for Gachi
 description:
   Declarative Dhall schemas, project configuration models, and

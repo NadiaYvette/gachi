@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: gachi-retrofit
-version: 0.1.0.0
+version: 0.1.0.1
 synopsis: Codebase retrofitting engine and repository inspector for Gachi
 description:
   Static analysis of arbitrary target checkouts: detects language stacks,

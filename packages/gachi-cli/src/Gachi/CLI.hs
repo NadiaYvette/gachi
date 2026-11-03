@@ -105,7 +105,7 @@ import Gachi.CLI.Sync (runSync)
 
 -- | Canonical version identifier for the gachi toolchain.
 gachiVersion :: Text
-gachiVersion = "0.1.0.0"
+gachiVersion = "0.1.0.1"
 
 --------------------------------------------------------------------------------
 -- 2. Top-Level Entry Points
