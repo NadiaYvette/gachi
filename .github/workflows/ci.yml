@@ -59,10 +59,11 @@ jobs:
         with:
           path: |
             ~/.cabal/store
-            dist-newstyle
-          key: ${{ runner.os }}-cabal-${{ hashFiles('cabal.project', '**/*.cabal') }}
+            dist-newstyle/build
+            dist-newstyle/cache
+          key: ${{ runner.os }}-cabal-v2-${{ hashFiles('cabal.project', '**/*.cabal') }}
           restore-keys: |
-            ${{ runner.os }}-cabal-
+            ${{ runner.os }}-cabal-v2-
 
       - name: Build All Packages & Dependencies
         run: cabal build all --enable-tests

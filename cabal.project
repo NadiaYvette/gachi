@@ -83,3 +83,40 @@ source-repository-package
   tag: 0.1.0.0
   subdir: packages/gargamelle-sheaf
 
+source-repository-package
+  type: git
+  location: https://github.com/NadiaYvette/gargamelle
+  tag: 0.1.0.0
+  subdir: packages/gargamelle-persistence
+
+source-repository-package
+  type: git
+  location: https://github.com/sjoerdvisscher/proarrow
+  tag: dfef861622984e2b825c48aaf86468c6d3b2da76
+  subdir: proarrow
+
+source-repository-package
+  type: git
+  location: https://github.com/sjoerdvisscher/proarrow
+  tag: dfef861622984e2b825c48aaf86468c6d3b2da76
+  subdir: proarrow-equipment
+
+source-repository-package
+  type: git
+  location: https://github.com/haskell-beam/beam
+  tag: 77d0bca3c1cda8364d7a7cf95881cd826feed8ec
+  subdir: beam-core
+
+source-repository-package
+  type: git
+  location: https://github.com/haskell-beam/beam
+  tag: 77d0bca3c1cda8364d7a7cf95881cd826feed8ec
+  subdir: beam-migrate
+
+source-repository-package
+  type: git
+  location: https://github.com/haskell-beam/beam
+  tag: 77d0bca3c1cda8364d7a7cf95881cd826feed8ec
+  subdir: beam-sqlite
+
+
