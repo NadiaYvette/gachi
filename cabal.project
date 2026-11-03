@@ -5,7 +5,7 @@ with-compiler: ghc-9.14.1
 write-ghc-environment-files: always
 allow-newer: *
 allow-newer: persistent:template-haskell, dhall:template-haskell, dhall:time
-constraints: any.aeson ==2.2.5.1
+constraints: any.aeson ==2.2.5.1, some < 1.1
 
 package *
   ghc-options: -Wall -Wcompat -Wredundant-constraints
@@ -20,18 +20,66 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/NadiaYvette/polytropos
-  tag: 4ffefe40de52ef72c626f811c6dd3fb147a6ba1b
+  tag: 0.1.0.3
   subdir: packages/polytropos-core
 
 source-repository-package
   type: git
   location: https://github.com/NadiaYvette/polytropos
-  tag: 4ffefe40de52ef72c626f811c6dd3fb147a6ba1b
+  tag: 0.1.0.3
   subdir: packages/polytropos-plugin
 
 source-repository-package
   type: git
   location: https://github.com/NadiaYvette/polytropos
-  tag: 4ffefe40de52ef72c626f811c6dd3fb147a6ba1b
+  tag: 0.1.0.3
   subdir: packages/polytropos-dhall
+
+source-repository-package
+  type: git
+  location: https://github.com/NadiaYvette/polytropos
+  tag: 0.1.0.3
+  subdir: packages/polytropos-profunctors
+
+source-repository-package
+  type: git
+  location: /home/nyc/src/penelope
+  tag: 0.1.0.0
+  subdir: packages/penelope-core
+
+source-repository-package
+  type: git
+  location: /home/nyc/src/penelope
+  tag: 0.1.0.0
+  subdir: packages/penelope-effects
+
+source-repository-package
+  type: git
+  location: /home/nyc/src/penelope
+  tag: 0.1.0.0
+  subdir: packages/penelope-static
+
+source-repository-package
+  type: git
+  location: /home/nyc/src/gargamelle
+  tag: 0.1.0.0
+  subdir: packages/gargamelle-core
+
+source-repository-package
+  type: git
+  location: /home/nyc/src/gargamelle
+  tag: 0.1.0.0
+  subdir: packages/gargamelle-effect
+
+source-repository-package
+  type: git
+  location: /home/nyc/src/gargamelle
+  tag: 0.1.0.0
+  subdir: packages/gargamelle-sandbox
+
+source-repository-package
+  type: git
+  location: /home/nyc/src/gargamelle
+  tag: 0.1.0.0
+  subdir: packages/gargamelle-sheaf
 

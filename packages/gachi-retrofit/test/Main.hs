@@ -23,6 +23,7 @@ import System.FilePath (takeDirectory, (</>))
 import Test.Hspec
 
 import Gachi.Retrofit
+import qualified Penelope.Effects.Binary as Pen
 import Gachi.Schema.Project (Author(..), defaultProject)
 
 main :: IO ()
@@ -464,6 +465,76 @@ main = hspec $ do
       length (qgGateResults report) `shouldBe` 14
 
       removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
+
+  describe "Gachi.Retrofit.Pipeline (Penelope Polycategorical Effect System Integration)" $ do
+    it "evaluates pure retrofit pipeline simulation via Penelope Rope" $ do
+      let input = defaultRetrofitInput "/test/project"
+          diag = DiagnosticReport
+            { diagTargetDir            = "/test/project"
+            , diagProjectName          = "test-proj"
+            , diagPrimaryLanguage      = Just (LangOther "none")
+            , diagLanguages            = []
+            , diagBuildSystems         = []
+            , diagLayout               = LayoutSinglePackage
+            , diagDiscoveredPackages   = []
+            , diagTestInfra            = TestInfrastructure False [] [] 0
+            , diagDocGaps              = []
+            , diagDocCompliancePct     = 50.0
+            , diagGitGovernance        = GitGovernanceStatus False False Nothing False False False False False False Nothing
+            , diagVerificationHarness  = VerificationHarnessStatus False Nothing False False False False False False
+            , diagRetrofitScore        = 50.0
+            , diagRemediationPlan      = []
+            }
+          plan = OverlayPlan
+            { planTargetDir      = "/test/project"
+            , planProjectName    = "test-proj"
+            , planActions        =
+                [ OverlayAction ActionCreate "README.md" "content" False CategoryDocumentation "desc"
+                , OverlayAction ActionPreserve "src/Main.hs" "" False CategoryDocumentation "desc"
+                ]
+            , planGitActions     = [GitInitRepo]
+            , planCreatedCount   = 1
+            , planPreservedCount = 1
+            }
+          ctx = RetrofitContext input diag plan
+          res = runRetrofitPipelinePure ctx
+      resultTargetDir res `shouldBe` "/test/project"
+      resultProjectName res `shouldBe` "test-proj"
+      resultCreatedFiles res `shouldBe` ["README.md"]
+      resultPreservedFiles res `shouldBe` ["src/Main.hs"]
+      resultSuccess res `shouldBe` True
+
+    it "composes Penelope Rope pipeline strands cleanly" $ do
+      let pipe = buildRetrofitSimulationPipeline
+          input = defaultRetrofitInput "/test/pipeline"
+          diag = DiagnosticReport
+            { diagTargetDir            = "/test/pipeline"
+            , diagProjectName          = "pipeline-proj"
+            , diagPrimaryLanguage      = Just LangHaskell
+            , diagLanguages            = []
+            , diagBuildSystems         = [BuildCabalProject]
+            , diagLayout               = LayoutMultiPackage
+            , diagDiscoveredPackages   = []
+            , diagTestInfra            = TestInfrastructure False [] [] 0
+            , diagDocGaps              = []
+            , diagDocCompliancePct     = 100.0
+            , diagGitGovernance        = GitGovernanceStatus True True (Just ".githooks") True True True True True True (Just ".gitmessage")
+            , diagVerificationHarness  = VerificationHarnessStatus True (Just "bin/verify") True True True True True True
+            , diagRetrofitScore        = 100.0
+            , diagRemediationPlan      = []
+            }
+          plan = OverlayPlan
+            { planTargetDir      = "/test/pipeline"
+            , planProjectName    = "pipeline-proj"
+            , planActions        = []
+            , planGitActions     = []
+            , planCreatedCount   = 0
+            , planPreservedCount = 0
+            }
+          ctx = RetrofitContext input diag plan
+          res = Pen.runRopePure pipe ctx
+      resultProjectName res `shouldBe` "pipeline-proj"
+      resultSuccess res `shouldBe` True
 
 findRepoRoot :: FilePath -> IO FilePath
 findRepoRoot dir = do

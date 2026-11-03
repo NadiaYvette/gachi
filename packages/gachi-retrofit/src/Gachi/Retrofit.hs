@@ -201,10 +201,22 @@ module Gachi.Retrofit
   , computeRemediationSteps
   , formatQualityGateReport
   , formatQualityGateMarkdown
+
+    -- * Re-exports from Gachi.Retrofit.Pipeline (Penelope Effect System)
+  , RetrofitPipeline
+  , buildRetrofitSimulationPipeline
+  , runRetrofitPipeline
+  , runRetrofitPipelinePure
+  , simulationStrand
+  , sandboxValidationStrand
+  , RetrofitInput(..)
+  , defaultRetrofitInput
+  , RetrofitContext(..)
   ) where
 
 import Gachi.Retrofit.Diagnostic
 import Gachi.Retrofit.Overlay
+import Gachi.Retrofit.Pipeline
 import Gachi.Retrofit.QualityGate
 import Gachi.Retrofit.Report
 import Gachi.Retrofit.Types
