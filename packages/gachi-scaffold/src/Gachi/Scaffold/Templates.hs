@@ -57,6 +57,7 @@ module Gachi.Scaffold.Templates
   , stateTemplate
 
     -- * Agent Rules Templates
+  , mcpJsonTemplate
   , ruleCommitAttributionTemplate
   , ruleCodeNavigationTemplate
   , ruleCompilerVerificationTemplate
@@ -878,13 +879,43 @@ stateTemplate proj =
 -- 5. Subdivided Agent Operational Rules
 --------------------------------------------------------------------------------
 
--- | Synthesizes `.agents/rules/` guidance files.
+-- | Synthesizes `.agents/` guidance files and MCP configuration.
 agentRuleEntries :: Project -> [FileEntry]
 agentRuleEntries _ =
   [ FileEntry ".agents/rules/commit-attribution.md" ruleCommitAttributionTemplate False
   , FileEntry ".agents/rules/code-navigation.md" ruleCodeNavigationTemplate False
   , FileEntry ".agents/rules/compiler-verification.md" ruleCompilerVerificationTemplate False
   , FileEntry ".agents/rules/documentation-precedence.md" ruleDocPrecedenceTemplate False
+  , FileEntry ".agents/mcp.json" mcpJsonTemplate False
+  ]
+
+-- | Generates @.agents/mcp.json@ configuring standard ecosystem MCP servers.
+mcpJsonTemplate :: Text
+mcpJsonTemplate = T.unlines
+  [ "{"
+  , "  \"$schema\": \"https://agent-plugins.org/schemas/1.0.0/mcp.schema.json\","
+  , "  \"mcpServers\": {"
+  , "    \"tricorder\": {"
+  , "      \"command\": \"tricorder-mcp\""
+  , "    },"
+  , "    \"contextful\": {"
+  , "      \"command\": \"cxf\","
+  , "      \"args\": [\"server\"]"
+  , "    },"
+  , "    \"codegraph\": {"
+  , "      \"command\": \"codegraph-mcp\","
+  , "      \"args\": [\"--mcp\", \"-w\", \".\"]"
+  , "    },"
+  , "    \"open-kioku\": {"
+  , "      \"command\": \"open-kioku\","
+  , "      \"args\": [\"mcp\", \"serve\", \"--repo\", \".\"]"
+  , "    },"
+  , "    \"haskell-language-server\": {"
+  , "      \"command\": \"haskell-language-server\","
+  , "      \"args\": [\"--lsp\"]"
+  , "    }"
+  , "  }"
+  , "}"
   ]
 
 -- | Generates `.agents/rules/commit-attribution.md`.
@@ -902,9 +933,10 @@ ruleCodeNavigationTemplate = renderMarkdown
   [ h1 "Code Navigation Rules"
   , para "Always follow the Progressive Disclosure Funnel:"
   , orderedList
-      [ plain "Level 0: Global Navigation (`docs/INDEX.md`, `tags` file)"
-      , plain "Level 1: Structural Outline (module export lists)"
-      , plain "Level 2: Targeted Slice (`view_file` StartLine / EndLine)"
+      [ plain "Level 0: Global Navigation (`docs/INDEX.md`, `tags` file: `grep -w \"^<Symbol>\" tags`)"
+      , plain "Level 1: Semantic & Institutional Memory (`ok memory search <query>`, `kioku recall <query>`, `cxf search <query>`)"
+      , plain "Level 2: Structural Outline (module export lists via `tags` or `ast-grep`)"
+      , plain "Level 3: Targeted Slice (`view_file` StartLine / EndLine)"
       ]
   ]
 
@@ -913,7 +945,8 @@ ruleCompilerVerificationTemplate :: Text
 ruleCompilerVerificationTemplate = renderMarkdown
   [ h1 "Compiler Verification Rules"
   , para "Maintain zero warnings under `-Wall -Wcompat -Wredundant-constraints`."
-  , para "Run physical verification gates before committing."
+  , para "Use `tricorder status --json` or `tricorder status --wait --json` for instant machine-readable diagnostics (<50 tokens) instead of dumping raw compiler logs."
+  , para "Run physical verification gates (`bin/<project>-verify`) before committing."
   ]
 
 -- | Generates `.agents/rules/documentation-precedence.md`.

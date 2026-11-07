@@ -126,6 +126,7 @@ import Gachi.Scaffold.Templates
   , gitmessageTemplate
   , hlintTemplate
   , linkcheckScriptTemplate
+  , mcpJsonTemplate
   , planTemplate
   , preCommitHookTemplate
   , readmeTemplate
@@ -303,6 +304,7 @@ synthesizeOverlayCandidates proj layout =
       advisories =
         [ OverlayAction ActionCreate "AGENTS.md" (agentsTemplate proj) False CategoryAgentAdvisory "Primary agent advisory pointer file"
         , OverlayAction ActionCreate "CLAUDE.md" (claudeTemplate proj) False CategoryAgentAdvisory "Compatibility symlink and instructions"
+        , OverlayAction ActionCreate ".agents/mcp.json" mcpJsonTemplate False CategoryAgentAdvisory "MCP server configuration (tricorder, contextful, codegraph, open-kioku, HLS)"
         , OverlayAction ActionCreate ".agents/rules/commit-attribution.md" ruleCommitAttributionTemplate False CategoryAgentAdvisory "Rule: Commit trailer attribution"
         , OverlayAction ActionCreate ".agents/rules/code-navigation.md" ruleCodeNavigationTemplate False CategoryAgentAdvisory "Rule: Token-efficient code navigation"
         , OverlayAction ActionCreate ".agents/rules/compiler-verification.md" ruleCompilerVerificationTemplate False CategoryAgentAdvisory "Rule: Zero-log compiler verification"

@@ -163,6 +163,7 @@ main = hspec $ do
         , ".agents/rules/code-navigation.md"
         , ".agents/rules/compiler-verification.md"
         , ".agents/rules/documentation-precedence.md"
+        , ".agents/mcp.json"
         ]
 
     it "synthesizes multi-package hierarchy matching PackageSpec" $ do
