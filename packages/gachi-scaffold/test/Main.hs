@@ -209,6 +209,8 @@ main = hspec $ parallel $ do
       cabalProject `shouldSatisfy` T.isInfixOf "with-compiler: ghc-9.14.1"
       readme `shouldSatisfy` T.isInfixOf "Nadia Yvette Chambers"
       readme `shouldSatisfy` T.isInfixOf "EUPL-1.2"
+      pkgCabal `shouldSatisfy` T.isInfixOf "version: 0.1.0.0"
+      pkgCabal `shouldSatisfy` T.isInfixOf "category: Development"
       pkgCabal `shouldSatisfy` T.isInfixOf "Gongju.Core"
       pkgCabal `shouldSatisfy` T.isInfixOf "Gongju.TypeLevel"
       agents `shouldSatisfy` T.isInfixOf "GONGJU_DESIGN.md"

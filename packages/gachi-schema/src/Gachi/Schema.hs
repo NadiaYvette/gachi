@@ -45,6 +45,8 @@ module Gachi.Schema
     -- * Projection Selectors
   , projectName
   , projectDescription
+  , projectVersion
+  , projectCategory
   , projectLicense
   , projectAuthor
   , projectGhcVersion
@@ -94,6 +96,8 @@ module Gachi.Schema
   , exampleProjectDhall
   , defaultProject
   , defaultPackage
+  , canonicalVersion
+  , canonicalCategory
   , canonicalLicense
   , canonicalGhcVersion
   , canonicalCabalVersion

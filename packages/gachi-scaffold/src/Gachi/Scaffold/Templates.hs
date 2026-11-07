@@ -106,11 +106,13 @@ import Gachi.Schema.Project
   , packageSynopsis
   , projectAuthor
   , projectCabalVersion
+  , projectCategory
   , projectDescription
   , projectGhcVersion
   , projectLicense
   , projectName
   , projectPackages
+  , projectVersion
   )
 import Gachi.Scaffold.Markdown
   ( Block(..)
@@ -1327,21 +1329,25 @@ packageCabalTemplate :: Project -> PackageSpec -> Text
 packageCabalTemplate proj pkg =
   let pName = packageName pkg
       auth = projectAuthor proj
+      syn = case packageSynopsis pkg of
+        s | T.null s -> "Foundational package for " <> pName
+        s | T.length s > 80 -> T.take 77 s <> "..."
+        s -> s
       exposes = case packageExposes pkg of
         [] -> [defaultModuleName pName]
         ms -> ms
   in T.unlines
     [ "cabal-version: 3.0"
     , "name: " <> pName
-    , "version: 0.1.0.0"
-    , "synopsis: " <> packageSynopsis pkg
+    , "version: " <> projectVersion proj
+    , "synopsis: " <> syn
     , "description:"
     , "  " <> packageSynopsis pkg <> " for the " <> projectName proj <> " ecosystem."
     , "license: " <> projectLicense proj
     , "license-file: LICENSE"
     , "author: " <> authorName auth
     , "maintainer: " <> authorEmail auth
-    , "category: Development"
+    , "category: " <> projectCategory proj
     , "homepage: https://github.com/NadiaYvette/" <> projectName proj
     , "bug-reports: https://github.com/NadiaYvette/" <> projectName proj <> "/issues"
     , "extra-doc-files:"

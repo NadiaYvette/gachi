@@ -20,6 +20,8 @@ main = hspec $ parallel $ do
           proj = defaultProject "gongju" auth
 
       projectName proj `shouldBe` "gongju"
+      projectVersion proj `shouldBe` "0.1.0.0"
+      projectCategory proj `shouldBe` "Development"
       projectLicense proj `shouldBe` "EUPL-1.2"
       projectGhcVersion proj `shouldBe` "9.14.1"
       projectCabalVersion proj `shouldBe` "3.18"
@@ -38,6 +40,8 @@ main = hspec $ parallel $ do
           proj = Project
             { name = "analytical-engine"
             , description = "Computational pioneer project"
+            , version = canonicalVersion
+            , category = canonicalCategory
             , license = canonicalLicense
             , author = auth
             , ghcVersion = canonicalGhcVersion
@@ -47,6 +51,8 @@ main = hspec $ parallel $ do
             }
 
       projectName proj `shouldBe` "analytical-engine"
+      projectVersion proj `shouldBe` canonicalVersion
+      projectCategory proj `shouldBe` canonicalCategory
       authorName auth `shouldBe` "Ada Lovelace"
       packageName pkg `shouldBe` "engine-core"
       packageSynopsis pkg `shouldBe` "Babbage engine simulator"

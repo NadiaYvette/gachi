@@ -166,6 +166,8 @@ projectSchemaDhall =
   \let Project : Type =\n\
   \  { name : Text\n\
   \  , description : Text\n\
+  \  , version : Text\n\
+  \  , category : Text\n\
   \  , license : Text\n\
   \  , author : Author\n\
   \  , ghcVersion : Text\n\
@@ -190,6 +192,8 @@ exampleProjectDhall =
   \  , Project =\n\
   \      { name : Text\n\
   \      , description : Text\n\
+  \      , version : Text\n\
+  \      , category : Text\n\
   \      , license : Text\n\
   \      , author : { name : Text, email : Text }\n\
   \      , ghcVersion : Text\n\
@@ -202,6 +206,8 @@ exampleProjectDhall =
   \let project : Schema.Project =\n\
   \  { name = \"gongju\"\n\
   \  , description = \"Type-level utility functions and Peano arithmetic crucible\"\n\
+  \  , version = \"0.1.0.0\"\n\
+  \  , category = \"Development\"\n\
   \  , license = \"EUPL-1.2\"\n\
   \  , author =\n\
   \      { name = \"Nadia Yvette Chambers\"\n\

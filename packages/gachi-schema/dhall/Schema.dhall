@@ -21,6 +21,8 @@ let Remote : Type =
 let Project : Type =
   { name : Text
   , description : Text
+  , version : Text
+  , category : Text
   , license : Text
   , author : Author
   , ghcVersion : Text

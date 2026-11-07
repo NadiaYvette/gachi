@@ -87,6 +87,8 @@ module Gachi.Schema.Project
   , remoteUrl
   , projectName
   , projectDescription
+  , projectVersion
+  , projectCategory
   , projectLicense
   , projectAuthor
   , projectGhcVersion
@@ -118,6 +120,8 @@ module Gachi.Schema.Project
     -- * Defaults & Canonical Invariants
   , defaultProject
   , defaultPackage
+  , canonicalVersion
+  , canonicalCategory
   , canonicalLicense
   , canonicalGhcVersion
   , canonicalCabalVersion
@@ -176,6 +180,10 @@ data Project = Project
     -- ^ Canonical project name.
   , description  :: !Text
     -- ^ Human-readable project description and mission.
+  , version      :: !Text
+    -- ^ Canonical project release version (defaults to @"0.1.0.0"@).
+  , category     :: !Text
+    -- ^ Primary package category (defaults to @"Development"@).
   , license      :: !Text
     -- ^ SPDX license identifier (defaults to @"EUPL-1.2"@).
   , author       :: !Author
@@ -241,49 +249,61 @@ remoteUrl (RemoteSpec _ u) = u
 --
 -- Time complexity: @O(1)@ direct pattern match.
 projectName :: Project -> Text
-projectName (Project n _ _ _ _ _ _ _) = n
+projectName (Project n _ _ _ _ _ _ _ _ _) = n
 
 -- | Disambiguated projection selector for 'Project' description.
 --
 -- Time complexity: @O(1)@ direct pattern match.
 projectDescription :: Project -> Text
-projectDescription (Project _ d _ _ _ _ _ _) = d
+projectDescription (Project _ d _ _ _ _ _ _ _ _) = d
+
+-- | Disambiguated projection selector for 'Project' version.
+--
+-- Time complexity: @O(1)@ direct pattern match.
+projectVersion :: Project -> Text
+projectVersion (Project _ _ v _ _ _ _ _ _ _) = v
+
+-- | Disambiguated projection selector for 'Project' category.
+--
+-- Time complexity: @O(1)@ direct pattern match.
+projectCategory :: Project -> Text
+projectCategory (Project _ _ _ cat _ _ _ _ _ _) = cat
 
 -- | Disambiguated projection selector for 'Project' license.
 --
 -- Time complexity: @O(1)@ direct pattern match.
 projectLicense :: Project -> Text
-projectLicense (Project _ _ l _ _ _ _ _) = l
+projectLicense (Project _ _ _ _ l _ _ _ _ _) = l
 
 -- | Disambiguated projection selector for 'Project' author.
 --
 -- Time complexity: @O(1)@ direct pattern match.
 projectAuthor :: Project -> Author
-projectAuthor (Project _ _ _ a _ _ _ _) = a
+projectAuthor (Project _ _ _ _ _ a _ _ _ _) = a
 
 -- | Disambiguated projection selector for 'Project' GHC version.
 --
 -- Time complexity: @O(1)@ direct pattern match.
 projectGhcVersion :: Project -> Text
-projectGhcVersion (Project _ _ _ _ g _ _ _) = g
+projectGhcVersion (Project _ _ _ _ _ _ g _ _ _) = g
 
 -- | Disambiguated projection selector for 'Project' Cabal version.
 --
 -- Time complexity: @O(1)@ direct pattern match.
 projectCabalVersion :: Project -> Text
-projectCabalVersion (Project _ _ _ _ _ c _ _) = c
+projectCabalVersion (Project _ _ _ _ _ _ _ c _ _) = c
 
 -- | Disambiguated projection selector for 'Project' packages.
 --
 -- Time complexity: @O(1)@ direct pattern match.
 projectPackages :: Project -> [PackageSpec]
-projectPackages (Project _ _ _ _ _ _ pkgs _) = pkgs
+projectPackages (Project _ _ _ _ _ _ _ _ pkgs _) = pkgs
 
 -- | Disambiguated projection selector for 'Project' remotes.
 --
 -- Time complexity: @O(1)@ direct pattern match.
 projectRemotes :: Project -> [RemoteSpec]
-projectRemotes (Project _ _ _ _ _ _ _ rms) = rms
+projectRemotes (Project _ _ _ _ _ _ _ _ _ rms) = rms
 
 --------------------------------------------------------------------------------
 -- Open Row Representations (Polytropos Flat Memory Records)
@@ -375,6 +395,8 @@ fromRemoteRec (RowRep rep) = RemoteSpec
 type ProjectRow =
   '[ "name" ':= Text
    , "description" ':= Text
+   , "version" ':= Text
+   , "category" ':= Text
    , "license" ':= Text
    , "author" ':= Author
    , "ghcVersion" ':= Text
@@ -388,16 +410,19 @@ type ProjectRec = Record ProjectRow
 
 -- | Convert nominal 'Project' into open 'ProjectRec'.
 --
--- Packs all 8 project fields into a single contiguous 'Data.Primitive.SmallArray' in row order:
--- Slot 0 (@"name"@), Slot 1 (@"description"@), Slot 2 (@"license"@), Slot 3 (@"author"@),
--- Slot 4 (@"ghcVersion"@), Slot 5 (@"cabalVersion"@), Slot 6 (@"packages"@), and Slot 7 (@"remotes"@).
+-- Packs all 10 project fields into a single contiguous 'Data.Primitive.SmallArray' in row order:
+-- Slot 0 (@"name"@), Slot 1 (@"description"@), Slot 2 (@"version"@), Slot 3 (@"category"@),
+-- Slot 4 (@"license"@), Slot 5 (@"author"@), Slot 6 (@"ghcVersion"@), Slot 7 (@"cabalVersion"@),
+-- Slot 8 (@"packages"@), and Slot 9 (@"remotes"@).
 --
 -- Time complexity: @O(1)@.
 toProjectRec :: Project -> ProjectRec
-toProjectRec (Project n d l a g c pkgs rms) =
+toProjectRec (Project n d v cat l a g c pkgs rms) =
   RowRep (productRep
     [ Identity (noInlineUnsafeCo n)
     , Identity (noInlineUnsafeCo d)
+    , Identity (noInlineUnsafeCo v)
+    , Identity (noInlineUnsafeCo cat)
     , Identity (noInlineUnsafeCo l)
     , Identity (noInlineUnsafeCo a)
     , Identity (noInlineUnsafeCo g)
@@ -416,17 +441,27 @@ fromProjectRec :: ProjectRec -> Project
 fromProjectRec (RowRep rep) = Project
   { name         = let Identity n    = fieldAt 0 rep in n
   , description  = let Identity d    = fieldAt 1 rep in d
-  , license      = let Identity l    = fieldAt 2 rep in l
-  , author       = let Identity a    = fieldAt 3 rep in a
-  , ghcVersion   = let Identity g    = fieldAt 4 rep in g
-  , cabalVersion = let Identity c    = fieldAt 5 rep in c
-  , packages     = let Identity pkgs = fieldAt 6 rep in pkgs
-  , remotes      = let Identity rms  = fieldAt 7 rep in rms
+  , version      = let Identity v    = fieldAt 2 rep in v
+  , category     = let Identity cat  = fieldAt 3 rep in cat
+  , license      = let Identity l    = fieldAt 4 rep in l
+  , author       = let Identity a    = fieldAt 5 rep in a
+  , ghcVersion   = let Identity g    = fieldAt 6 rep in g
+  , cabalVersion = let Identity c    = fieldAt 7 rep in c
+  , packages     = let Identity pkgs = fieldAt 8 rep in pkgs
+  , remotes      = let Identity rms  = fieldAt 9 rep in rms
   }
 
 --------------------------------------------------------------------------------
 -- Canonical Ecosystem Standards & Turnkey Defaults
 --------------------------------------------------------------------------------
+
+-- | Canonical default project version: 0.1.0.0.
+canonicalVersion :: Text
+canonicalVersion = "0.1.0.0"
+
+-- | Canonical default project category: Development.
+canonicalCategory :: Text
+canonicalCategory = "Development"
 
 -- | Canonical default license per ecosystem policy: EUPL-1.2.
 canonicalLicense :: Text
@@ -455,6 +490,8 @@ defaultProject :: Text -> Author -> Project
 defaultProject projName auth = Project
   { name         = projName
   , description  = "Ecosystem workspace for " <> projName
+  , version      = canonicalVersion
+  , category     = canonicalCategory
   , license      = canonicalLicense
   , author       = auth
   , ghcVersion   = canonicalGhcVersion

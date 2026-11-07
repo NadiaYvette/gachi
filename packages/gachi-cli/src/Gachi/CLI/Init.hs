@@ -299,6 +299,8 @@ runInteractiveWizard opts = do
 
   let proj = Project
         { name = pName
+        , version = "0.1.0.0"
+        , category = "Development"
         , description = pDesc
         , license = "EUPL-1.2"
         , author = Author { name = aName, email = aEmail }
