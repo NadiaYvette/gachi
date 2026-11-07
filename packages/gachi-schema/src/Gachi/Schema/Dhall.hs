@@ -147,7 +147,13 @@ renderProjectRecDhall = Core.pretty . Dhall.embed Dhall.inject
 -- | The canonical Dhall schema defining 'Author', 'Package', 'Remote', and 'Project' types.
 projectSchemaDhall :: Text
 projectSchemaDhall =
-  "let Author : Type =\n\
+  "let NonEmpty : Type -> Type =\n\
+  \  \\(a : Type) ->\n\
+  \    { head : a\n\
+  \    , tail : List a\n\
+  \    }\n\
+  \\n\
+  \let Author : Type =\n\
   \  { name : Text\n\
   \  , email : Text\n\
   \  }\n\
@@ -168,25 +174,35 @@ projectSchemaDhall =
   \  , description : Text\n\
   \  , version : Text\n\
   \  , category : Text\n\
-  \  , license : Text\n\
+  \  , license : NonEmpty Text\n\
   \  , author : Author\n\
   \  , ghcVersion : Text\n\
   \  , cabalVersion : Text\n\
-  \  , packages : List Package\n\
+  \  , packages : NonEmpty Package\n\
   \  , remotes : List Remote\n\
   \  }\n\
   \\n\
-  \in  { Author = Author\n\
+  \let singleton : forall (a : Type) -> a -> NonEmpty a =\n\
+  \  \\(a : Type) -> \\(x : a) -> { head = x, tail = [] : List a }\n\
+  \\n\
+  \let cons : forall (a : Type) -> a -> List a -> NonEmpty a =\n\
+  \  \\(a : Type) -> \\(x : a) -> \\(xs : List a) -> { head = x, tail = xs }\n\
+  \\n\
+  \in  { NonEmpty = NonEmpty\n\
+  \    , Author = Author\n\
   \    , Package = Package\n\
   \    , Remote = Remote\n\
   \    , Project = Project\n\
+  \    , singleton = singleton\n\
+  \    , cons = cons\n\
   \    }\n"
 
 -- | Turnkey sample Dhall specification for the 'gongju' crucible project.
 exampleProjectDhall :: Text
 exampleProjectDhall =
   "let Schema =\n\
-  \  { Author = { name : Text, email : Text }\n\
+  \  { NonEmpty = \\(a : Type) -> { head : a, tail : List a }\n\
+  \  , Author = { name : Text, email : Text }\n\
   \  , Package = { name : Text, synopsis : Text, exposes : List Text }\n\
   \  , Remote = { name : Text, url : Text }\n\
   \  , Project =\n\
@@ -194,13 +210,14 @@ exampleProjectDhall =
   \      , description : Text\n\
   \      , version : Text\n\
   \      , category : Text\n\
-  \      , license : Text\n\
+  \      , license : { head : Text, tail : List Text }\n\
   \      , author : { name : Text, email : Text }\n\
   \      , ghcVersion : Text\n\
   \      , cabalVersion : Text\n\
-  \      , packages : List { name : Text, synopsis : Text, exposes : List Text }\n\
+  \      , packages : { head : { name : Text, synopsis : Text, exposes : List Text }, tail : List { name : Text, synopsis : Text, exposes : List Text } }\n\
   \      , remotes : List { name : Text, url : Text }\n\
   \      }\n\
+  \  , singleton = \\(a : Type) -> \\(x : a) -> { head = x, tail = [] : List a }\n\
   \  }\n\
   \\n\
   \let project : Schema.Project =\n\
@@ -208,7 +225,7 @@ exampleProjectDhall =
   \  , description = \"Type-level utility functions and Peano arithmetic crucible\"\n\
   \  , version = \"0.1.0.0\"\n\
   \  , category = \"Development\"\n\
-  \  , license = \"EUPL-1.2\"\n\
+  \  , license = Schema.singleton Text \"EUPL-1.2\"\n\
   \  , author =\n\
   \      { name = \"Nadia Yvette Chambers\"\n\
   \      , email = \"nadia.yvette.chambers@ik.me\"\n\
@@ -216,7 +233,8 @@ exampleProjectDhall =
   \  , ghcVersion = \"9.14.1\"\n\
   \  , cabalVersion = \"3.18\"\n\
   \  , packages =\n\
-  \      [ { name = \"gongju\"\n\
+  \      Schema.singleton Schema.Package\n\
+  \        { name = \"gongju\"\n\
   \        , synopsis = \"Pure Peano type-level utilities and HList operations\"\n\
   \        , exposes =\n\
   \            [ \"Gongju.Peano\"\n\
@@ -226,7 +244,6 @@ exampleProjectDhall =
   \            , \"Gongju.HList\"\n\
   \            ]\n\
   \        }\n\
-  \      ]\n\
   \  , remotes =\n\
   \      [ { name = \"github\"\n\
   \        , url = \"git@github.com:NadiaYvette/gongju.git\"\n\

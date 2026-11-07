@@ -7,6 +7,7 @@ module Main (main) where
 import Test.Hspec
 import Control.Exception (SomeException, try)
 import Data.Either (isLeft)
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Text (Text)
 
 import Gachi.Schema
@@ -22,15 +23,14 @@ main = hspec $ parallel $ do
       projectName proj `shouldBe` "gongju"
       projectVersion proj `shouldBe` "0.1.0.0"
       projectCategory proj `shouldBe` "Development"
-      projectLicense proj `shouldBe` "EUPL-1.2"
+      projectLicense proj `shouldBe` ("EUPL-1.2" :| [])
       projectGhcVersion proj `shouldBe` "9.14.1"
       projectCabalVersion proj `shouldBe` "3.18"
       authorName (projectAuthor proj) `shouldBe` "Nadia Yvette Chambers"
       authorEmail (projectAuthor proj) `shouldBe` "nadia.yvette.chambers@ik.me"
       length (projectPackages proj) `shouldBe` 1
       case projectPackages proj of
-        (pkg : _) -> packageName pkg `shouldBe` "gongju"
-        []        -> expectationFailure "expected at least one package"
+        (pkg :| _) -> packageName pkg `shouldBe` "gongju"
       projectRemotes proj `shouldBe` []
 
     it "exposes projection helpers disambiguating DuplicateRecordFields" do
@@ -46,7 +46,7 @@ main = hspec $ parallel $ do
             , author = auth
             , ghcVersion = canonicalGhcVersion
             , cabalVersion = canonicalCabalVersion
-            , packages = [pkg]
+            , packages = pkg :| []
             , remotes = [remote]
             }
 
@@ -95,11 +95,11 @@ main = hspec $ parallel $ do
     it "decodes embedded exampleProjectDhall into strongly typed Project" do
       proj <- decodeProjectText exampleProjectDhall
       projectName proj `shouldBe` "gongju"
-      projectLicense proj `shouldBe` "EUPL-1.2"
+      projectLicense proj `shouldBe` ("EUPL-1.2" :| [])
       authorName (projectAuthor proj) `shouldBe` "Nadia Yvette Chambers"
       length (projectPackages proj) `shouldBe` 1
       case projectPackages proj of
-        (pkg : _) -> do
+        (pkg :| _) -> do
           packageName pkg `shouldBe` "gongju"
           packageExposes pkg `shouldBe`
             [ "Gongju.Peano"
@@ -108,7 +108,6 @@ main = hspec $ parallel $ do
             , "Gongju.Permute"
             , "Gongju.HList"
             ]
-        [] -> expectationFailure "expected package list to be non-empty"
       length (projectRemotes proj) `shouldBe` 2
       map remoteName (projectRemotes proj) `shouldBe` ["github", "gitlab"]
 
@@ -116,7 +115,7 @@ main = hspec $ parallel $ do
       recProj <- decodeProjectRecText exampleProjectDhall
       let proj = fromProjectRec recProj
       projectName proj `shouldBe` "gongju"
-      projectLicense proj `shouldBe` "EUPL-1.2"
+      projectLicense proj `shouldBe` ("EUPL-1.2" :| [])
 
     it "roundtrips nominal Project through renderProjectDhall and decodeProjectText" do
       let auth = Author { name = "Nadia Yvette Chambers", email = "nadia.yvette.chambers@ik.me" }
@@ -144,4 +143,4 @@ main = hspec $ parallel $ do
         Right p -> pure p
         Left _  -> decodeProjectFile "packages/gachi-schema/dhall/example-project.dhall"
       projectName proj `shouldBe` "gongju"
-      projectLicense proj `shouldBe` "EUPL-1.2"
+      projectLicense proj `shouldBe` ("EUPL-1.2" :| [])

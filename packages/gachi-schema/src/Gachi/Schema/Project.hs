@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Module: Gachi.Schema.Project
 -- Description: Strongly-typed nominal records and open row representations for projects
@@ -64,11 +65,14 @@
 -- = Worked Example
 --
 -- >>> import Gachi.Schema.Project
+-- >>> import Data.List.NonEmpty (NonEmpty(..))
 -- >>> let auth = Author { name = "Nadia Yvette Chambers", email = "nadia.yvette.chambers@ik.me" }
 -- >>> let proj = defaultProject "gongju" auth
 -- >>> projectName proj
 -- "gongju"
 -- >>> projectLicense proj
+-- "EUPL-1.2" :| []
+-- >>> renderSpdxLicense (projectLicense proj)
 -- "EUPL-1.2"
 module Gachi.Schema.Project
   ( -- * Nominal Schema Data Types
@@ -125,11 +129,24 @@ module Gachi.Schema.Project
   , canonicalLicense
   , canonicalGhcVersion
   , canonicalCabalVersion
+  , renderSpdxLicense
   ) where
 
-import Data.Text (Text)
+import Data.Functor.Contravariant ((>$<))
 import Data.Functor.Identity (Identity(..))
-import Dhall (FromDhall, ToDhall)
+import Data.List.NonEmpty (NonEmpty(..))
+import qualified Data.List.NonEmpty as NE
+import Data.Text (Text)
+import qualified Data.Text as T
+import Dhall
+  ( FromDhall(..)
+  , ToDhall(..)
+  , encodeFieldWith
+  , field
+  , record
+  , recordEncoder
+  , (>*<)
+  )
 import GHC.Generics (Generic)
 import Polytropos
   ( Pair(..)
@@ -142,6 +159,22 @@ import Polytropos.Core
   , productRep
   )
 import Polytropos.Dhall (GenericDhall(..))
+
+--------------------------------------------------------------------------------
+-- Dhall Codec Instances for NonEmpty
+--------------------------------------------------------------------------------
+
+-- | Deserializes a Dhall @NonEmpty a@ record (@{ head : a, tail : List a }@)
+-- into Haskell's 'NonEmpty' list.
+instance FromDhall a => FromDhall (NonEmpty a) where
+  autoWith opts = record $ (:|) <$> field "head" (autoWith opts) <*> field "tail" (autoWith opts)
+
+-- | Serializes a Haskell 'NonEmpty' list into a Dhall @NonEmpty a@ record
+-- (@{ head : a, tail : List a }@).
+instance ToDhall a => ToDhall (NonEmpty a) where
+  injectWith opts = recordEncoder $
+    (\(x :| xs) -> (x, xs)) >$<
+      (encodeFieldWith "head" (injectWith opts) >*< encodeFieldWith "tail" (injectWith opts))
 
 -- | Author and maintainer metadata for a project.
 data Author = Author
@@ -184,15 +217,15 @@ data Project = Project
     -- ^ Canonical project release version (defaults to @"0.1.0.0"@).
   , category     :: !Text
     -- ^ Primary package category (defaults to @"Development"@).
-  , license      :: !Text
-    -- ^ SPDX license identifier (defaults to @"EUPL-1.2"@).
+  , license      :: !(NonEmpty Text)
+    -- ^ Guaranteed non-empty list of SPDX license identifiers forming an OR disjunction.
   , author       :: !Author
     -- ^ Primary maintainer or author identity.
   , ghcVersion   :: !Text
     -- ^ Pinned GHC compiler release (e.g., @"9.14.1"@).
   , cabalVersion :: !Text
     -- ^ Pinned Cabal specification release (e.g., @"3.18"@).
-  , packages     :: ![PackageSpec]
+  , packages     :: !(NonEmpty PackageSpec)
     -- ^ Modular package hierarchy constituting this workspace.
   , remotes      :: ![RemoteSpec]
     -- ^ Multi-forge remotes configured for replication.
@@ -272,7 +305,7 @@ projectCategory (Project _ _ _ cat _ _ _ _ _ _) = cat
 -- | Disambiguated projection selector for 'Project' license.
 --
 -- Time complexity: @O(1)@ direct pattern match.
-projectLicense :: Project -> Text
+projectLicense :: Project -> NonEmpty Text
 projectLicense (Project _ _ _ _ l _ _ _ _ _) = l
 
 -- | Disambiguated projection selector for 'Project' author.
@@ -296,7 +329,7 @@ projectCabalVersion (Project _ _ _ _ _ _ _ c _ _) = c
 -- | Disambiguated projection selector for 'Project' packages.
 --
 -- Time complexity: @O(1)@ direct pattern match.
-projectPackages :: Project -> [PackageSpec]
+projectPackages :: Project -> NonEmpty PackageSpec
 projectPackages (Project _ _ _ _ _ _ _ _ pkgs _) = pkgs
 
 -- | Disambiguated projection selector for 'Project' remotes.
@@ -397,11 +430,11 @@ type ProjectRow =
    , "description" ':= Text
    , "version" ':= Text
    , "category" ':= Text
-   , "license" ':= Text
+   , "license" ':= NonEmpty Text
    , "author" ':= Author
    , "ghcVersion" ':= Text
    , "cabalVersion" ':= Text
-   , "packages" ':= [PackageSpec]
+   , "packages" ':= NonEmpty PackageSpec
    , "remotes" ':= [RemoteSpec]
    ]
 
@@ -464,8 +497,8 @@ canonicalCategory :: Text
 canonicalCategory = "Development"
 
 -- | Canonical default license per ecosystem policy: EUPL-1.2.
-canonicalLicense :: Text
-canonicalLicense = "EUPL-1.2"
+canonicalLicense :: NonEmpty Text
+canonicalLicense = "EUPL-1.2" :| []
 
 -- | Canonical default GHC version: 9.14.1.
 canonicalGhcVersion :: Text
@@ -474,6 +507,15 @@ canonicalGhcVersion = "9.14.1"
 -- | Canonical default Cabal specification version: 3.18.
 canonicalCabalVersion :: Text
 canonicalCabalVersion = "3.18"
+
+-- | Render a guaranteed non-empty list of licenses into a canonical SPDX disjunction expression.
+--
+-- Single licenses render unchanged (e.g. @"EUPL-1.2"@). Multiple licenses are joined with
+-- @" OR "@ (e.g. @"EUPL-1.2 OR Apache-2.0"@).
+--
+-- Time complexity: @O(L)@ in total license string length.
+renderSpdxLicense :: NonEmpty Text -> Text
+renderSpdxLicense = T.intercalate " OR " . NE.toList
 
 -- | Construct a default 'PackageSpec' with canonical conventions.
 defaultPackage :: Text -> PackageSpec
@@ -496,6 +538,6 @@ defaultProject projName auth = Project
   , author       = auth
   , ghcVersion   = canonicalGhcVersion
   , cabalVersion = canonicalCabalVersion
-  , packages     = [defaultPackage projName]
+  , packages     = defaultPackage projName :| []
   , remotes      = []
   }

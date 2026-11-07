@@ -15,6 +15,7 @@ module Main (main) where
 import Control.Exception (SomeException(..), bracket, catch, try)
 import Control.Monad (forM_)
 import Data.IORef (IORef, atomicModifyIORef', newIORef)
+import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -72,7 +73,7 @@ gongjuFixture =
         }
   in (defaultProject "gongju" auth)
        { description = "Type-level utility library and open ADT substrate for Haskell"
-       , packages = [pkg]
+       , packages = pkg :| []
        }
 
 main :: IO ()

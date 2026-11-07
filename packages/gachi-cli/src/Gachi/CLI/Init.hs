@@ -69,6 +69,7 @@ module Gachi.CLI.Init
 
 import Control.Exception (SomeException, catch, try)
 import Control.Monad (forM_, unless, when)
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -91,6 +92,8 @@ import Gachi.Schema.Project
   , Project(..)
   , authorEmail
   , authorName
+  , canonicalLicense
+  , defaultPackage
   , defaultProject
   , projectAuthor
   , projectDescription
@@ -227,7 +230,7 @@ applyCliOverrides opts proj =
       auth = Author { name = aName, email = aEmail }
       pkgs = case initPackages opts of
         [] -> projectPackages proj
-        ps -> [ PackageSpec p ("Domain package for " <> p) [] | p <- ps ]
+        (p:ps) -> PackageSpec p ("Domain package for " <> p) [] :| [ PackageSpec p' ("Domain package for " <> p') [] | p' <- ps ]
   in proj
        { name = pName
        , description = pDesc
@@ -292,7 +295,9 @@ runInteractiveWizard opts = do
         ps -> T.intercalate "," ps
   pkgsRaw <- promptUser "Packages to scaffold (comma-separated)" defaultPkgs
   let pkgNames = filter (not . T.null) (map T.strip (T.splitOn "," pkgsRaw))
-      pkgSpecs = [ PackageSpec p ("Domain implementation for " <> p) [] | p <- pkgNames ]
+      pkgSpecs = case pkgNames of
+        [] -> defaultPackage pName :| []
+        (p:ps) -> PackageSpec p ("Domain implementation for " <> p) [] :| [ PackageSpec p' ("Domain implementation for " <> p') [] | p' <- ps ]
 
   let defaultTarget = maybe pName T.pack (initTargetDir opts)
   targetRaw <- promptUser "Destination directory" defaultTarget
@@ -302,7 +307,7 @@ runInteractiveWizard opts = do
         , version = "0.1.0.0"
         , category = "Development"
         , description = pDesc
-        , license = "EUPL-1.2"
+        , license = canonicalLicense
         , author = Author { name = aName, email = aEmail }
         , ghcVersion = "9.14.1"
         , cabalVersion = "3.18"

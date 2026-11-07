@@ -93,6 +93,7 @@ module Gachi.Scaffold.Templates
   ) where
 
 import Data.Char (isAlphaNum, toUpper)
+import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -113,6 +114,7 @@ import Gachi.Schema.Project
   , projectName
   , projectPackages
   , projectVersion
+  , renderSpdxLicense
   )
 import Gachi.Scaffold.Markdown
   ( Block(..)
@@ -302,7 +304,7 @@ gitmessageTemplate = T.unlines
 -- | Generates @tagref.yml@ cross-reference configuration.
 tagrefConfigTemplate :: Project -> Text
 tagrefConfigTemplate proj = T.unlines
-  [ "# SPDX-License-Identifier: " <> projectLicense proj
+  [ "# SPDX-License-Identifier: " <> renderSpdxLicense (projectLicense proj)
   , "# Tagref configuration for " <> projectName proj
   , ""
   , "ignore_rules:"
@@ -729,9 +731,10 @@ operationalGovernanceEntries proj =
 -- | Synthesizes root @LICENSE@ and @LICENSES/@ files.
 licensingEntries :: Project -> [FileEntry]
 licensingEntries proj =
-  [ FileEntry "LICENSE" (licenseTemplate proj) False
-  , FileEntry ("LICENSES/" <> T.unpack (projectLicense proj) <> ".txt") (licenseTemplate proj) False
-  ]
+  FileEntry "LICENSE" (licenseTemplate proj) False
+    : [ FileEntry ("LICENSES/" <> T.unpack lic <> ".txt") (licenseTemplate proj) False
+      | lic <- NE.toList (projectLicense proj)
+      ]
 
 -- | Generates standard LICENSE text (EUPL-1.2 notice).
 licenseTemplate :: Project -> Text
@@ -780,7 +783,7 @@ readmeTemplate proj =
         ]
     , h2 "License & Attribution"
     , bulletList
-        [ inlines [bold "License:", plain (" " <> projectLicense proj)]
+        [ inlines [bold "License:", plain (" " <> renderSpdxLicense (projectLicense proj))]
         , inlines [bold "Author:", plain (" " <> authorName auth <> " <" <> authorEmail auth <> ">")]
         ]
     ]
@@ -1120,7 +1123,7 @@ docsIndexTemplate :: Project -> Text
 docsIndexTemplate proj =
   let pName = projectName proj
       uSlug = toUpperSlug pName
-      pkgs = projectPackages proj
+      pkgs = NE.toList (projectPackages proj)
   in renderMarkdown
     [ h1 (pName <> " Documentation Index")
     , para ("Welcome to the `" <> pName <> "` technical documentation corpus.")
@@ -1296,7 +1299,7 @@ docsCommitAttributionTemplate proj =
 -- | Synthesizes package manifests, source modules, test suites, and documentation.
 packageHierarchyEntries :: Project -> [FileEntry]
 packageHierarchyEntries proj =
-  concatMap (packageEntries proj) (projectPackages proj)
+  concatMap (packageEntries proj) (NE.toList (projectPackages proj))
 
 -- | Synthesizes all files for a specific 'PackageSpec'.
 packageEntries :: Project -> PackageSpec -> [FileEntry]
@@ -1343,7 +1346,7 @@ packageCabalTemplate proj pkg =
     , "synopsis: " <> syn
     , "description:"
     , "  " <> packageSynopsis pkg <> " for the " <> projectName proj <> " ecosystem."
-    , "license: " <> projectLicense proj
+    , "license: " <> renderSpdxLicense (projectLicense proj)
     , "license-file: LICENSE"
     , "author: " <> authorName auth
     , "maintainer: " <> authorEmail auth
@@ -1425,7 +1428,7 @@ packageReadmeTemplate proj pkg =
     , h2 "Modules"
     , bulletList [ code m | m <- packageExposes pkg ]
     , h2 "License"
-    , para (projectLicense proj)
+    , para (renderSpdxLicense (projectLicense proj))
     ]
 
 -- | Generates an exposed module with comprehensive Haddock documentation (>50% comments).

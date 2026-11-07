@@ -27,10 +27,13 @@
 -- = Worked Example
 --
 -- >>> import Gachi.Schema
+-- >>> import Data.List.NonEmpty (NonEmpty(..))
 -- >>> proj <- decodeProjectText exampleProjectDhall
 -- >>> projectName proj
 -- "gongju"
 -- >>> projectLicense proj
+-- "EUPL-1.2" :| []
+-- >>> renderSpdxLicense (projectLicense proj)
 -- "EUPL-1.2"
 module Gachi.Schema
   ( -- * Note Architecture
@@ -101,6 +104,7 @@ module Gachi.Schema
   , canonicalLicense
   , canonicalGhcVersion
   , canonicalCabalVersion
+  , renderSpdxLicense
   ) where
 
 import Gachi.Schema.Project
