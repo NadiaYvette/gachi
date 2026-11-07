@@ -56,12 +56,17 @@ module Gachi.Scaffold.Templates
   , planTemplate
   , stateTemplate
 
-    -- * Agent Rules Templates
+    -- * Agent Rules & Skills Templates
   , mcpJsonTemplate
   , ruleCommitAttributionTemplate
   , ruleCodeNavigationTemplate
   , ruleCompilerVerificationTemplate
   , ruleDocPrecedenceTemplate
+  , skillCodeNavigationTemplate
+  , skillContextfulTemplate
+  , skillTricorderTemplate
+  , skillYamaarashiTemplate
+  , pointerTemplate
 
     -- * Documentation Corpus Templates
   , docsIndexTemplate
@@ -712,6 +717,9 @@ operationalGovernanceEntries proj =
   [ FileEntry "README.md" (readmeTemplate proj) False
   , FileEntry "AGENTS.md" (agentsTemplate proj) False
   , FileEntry "CLAUDE.md" (claudeTemplate proj) False
+  , FileEntry ".cursorrules" (pointerTemplate ".cursorrules" "AGENTS.md") False
+  , FileEntry ".hermes.md" (pointerTemplate ".hermes.md" "AGENTS.md") False
+  , FileEntry ".windsurfrules" (pointerTemplate ".windsurfrules" "AGENTS.md") False
   , FileEntry "PLAN.md" (planTemplate proj) False
   , FileEntry "STATE.md" (stateTemplate proj) False
   ]
@@ -800,6 +808,13 @@ agentsTemplate proj =
         , inlines [linkInline (code ".agents/rules/compiler-verification.md") ".agents/rules/compiler-verification.md", plain " — Zero-log compiler verification, tests, and zero-contamination."]
         , inlines [linkInline (code ".agents/rules/documentation-precedence.md") ".agents/rules/documentation-precedence.md", plain " — Precedence rule (\"code wins at runtime; notes corrected regardless\")."]
         ]
+    , h2 "Subdivided operational skills (`.agents/skills/`)"
+    , bulletList
+        [ inlines [linkInline (code ".agents/skills/code-navigation/SKILL.md") ".agents/skills/code-navigation/SKILL.md", plain " — Fast, token-efficient code navigation using tags, ripgrep, and ast-grep."]
+        , inlines [linkInline (code ".agents/skills/contextful/SKILL.md") ".agents/skills/contextful/SKILL.md", plain " — Query project context packs, local FTS5 BM25 search."]
+        , inlines [linkInline (code ".agents/skills/tricorder/SKILL.md") ".agents/skills/tricorder/SKILL.md", plain " — Check continuous GHCi build status and zero-log compiler diagnostics."]
+        , inlines [linkInline (code ".agents/skills/yamaarashi/SKILL.md") ".agents/skills/yamaarashi/SKILL.md", plain " — Autonomous task packet runner and ASCII Kanban board projection."]
+        ]
     , h2 "Operational advisories"
     , orderedList
         [ plain "**Design docs are load-bearing.** Stale notes must be corrected in the same change set."
@@ -811,11 +826,15 @@ agentsTemplate proj =
 
 -- | Generates @CLAUDE.md@ pointing to canonical advisory in @AGENTS.md@.
 claudeTemplate :: Project -> Text
-claudeTemplate _ = renderMarkdown
-  [ h1 "CLAUDE.md"
+claudeTemplate _ = pointerTemplate "CLAUDE.md" "AGENTS.md"
+
+-- | Generates a generic pointer document targeting a canonical orientation file.
+pointerTemplate :: Text -> Text -> Text
+pointerTemplate title target = renderMarkdown
+  [ h1 title
   , paraInlines
       [ plain "Canonical advisory instructions are maintained in "
-      , link "AGENTS.md" "AGENTS.md"
+      , link target target
       , plain "."
       ]
   ]
@@ -879,13 +898,17 @@ stateTemplate proj =
 -- 5. Subdivided Agent Operational Rules
 --------------------------------------------------------------------------------
 
--- | Synthesizes `.agents/` guidance files and MCP configuration.
+-- | Synthesizes `.agents/` guidance files, skills, and MCP configuration.
 agentRuleEntries :: Project -> [FileEntry]
 agentRuleEntries _ =
   [ FileEntry ".agents/rules/commit-attribution.md" ruleCommitAttributionTemplate False
   , FileEntry ".agents/rules/code-navigation.md" ruleCodeNavigationTemplate False
   , FileEntry ".agents/rules/compiler-verification.md" ruleCompilerVerificationTemplate False
   , FileEntry ".agents/rules/documentation-precedence.md" ruleDocPrecedenceTemplate False
+  , FileEntry ".agents/skills/code-navigation/SKILL.md" skillCodeNavigationTemplate False
+  , FileEntry ".agents/skills/contextful/SKILL.md" skillContextfulTemplate False
+  , FileEntry ".agents/skills/tricorder/SKILL.md" skillTricorderTemplate False
+  , FileEntry ".agents/skills/yamaarashi/SKILL.md" skillYamaarashiTemplate False
   , FileEntry ".agents/mcp.json" mcpJsonTemplate False
   ]
 
@@ -955,6 +978,122 @@ ruleDocPrecedenceTemplate = renderMarkdown
   [ h1 "Documentation Precedence Rules"
   , para "Precedence rule: Code wins at runtime; notes corrected regardless."
   , para "Design docs are load-bearing. Update notes when implementation changes."
+  ]
+
+-- | Generates `.agents/skills/code-navigation/SKILL.md`.
+skillCodeNavigationTemplate :: Text
+skillCodeNavigationTemplate = T.unlines
+  [ "---"
+  , "name: code-navigation"
+  , "description: Fast, token-efficient code navigation using tags, ripgrep, tree-sitter, and ast-grep. Use when searching for type definitions, function declarations, row types, or AST patterns."
+  , "user-invocable: true"
+  , "---"
+  , ""
+  , "# Token-Efficient Code Navigation & Structural Search"
+  , ""
+  , "To conserve context window tokens and avoid reading whole files unnecessarily, follow the **Progressive Disclosure Funnel**:"
+  , ""
+  , "## 1. Symbol Definition Jumps (Level 0 — <15 tokens)"
+  , ""
+  , "Query the precomputed `./tags` index generated by `hasktags`:"
+  , ""
+  , "```bash"
+  , "grep -w \"^<SymbolName>\" tags"
+  , "```"
+  , ""
+  , "## 2. Targeted Slice Inspection (Level 1 — <250 tokens)"
+  , ""
+  , "Do **NOT** view whole files. Use `view_file` with `StartLine` and `EndLine` scoped to the exact slice (e.g. ±15 lines around the symbol definition)."
+  , ""
+  , "## 3. Structural Pattern Matching with `ast-grep` (Level 2 — <300 tokens)"
+  , ""
+  , "```bash"
+  , "sg -p 'class $CLASS $PARAM where $$$METHODS' packages/"
+  , "```"
+  , ""
+  , "## 4. Semantic Identifier Cross-References with `ripgrep`"
+  , ""
+  , "```bash"
+  , "rg --type haskell -w \"<Symbol>\" packages/"
+  , "```"
+  , ""
+  , "## 5. Keeping the Index Synchronized"
+  , ""
+  , "```bash"
+  , "./bin/generate-tags"
+  , "```"
+  ]
+
+-- | Generates `.agents/skills/contextful/SKILL.md`.
+skillContextfulTemplate :: Text
+skillContextfulTemplate = T.unlines
+  [ "---"
+  , "name: contextful"
+  , "description: Query project context packs, local FTS5 BM25 search, and token-budgeted citations via Contextful."
+  , "user-invocable: true"
+  , "---"
+  , ""
+  , "# Project Context & Search with Contextful"
+  , ""
+  , "Instead of reading dozens of files, Contextful indexes the workspace once and returns ranked, cited, token-budgeted **context packs**."
+  , ""
+  , "## Usage Workflows"
+  , ""
+  , "### 1. Generating Context Packs for Queries"
+  , "```bash"
+  , "cxf query \"<query>\" --budget 2000"
+  , "cxf search \"<query>\" --limit 10"
+  , "```"
+  , ""
+  , "### 2. Inspecting Project Index Status"
+  , "```bash"
+  , "cxf status"
+  , "```"
+  ]
+
+-- | Generates `.agents/skills/tricorder/SKILL.md`.
+skillTricorderTemplate :: Text
+skillTricorderTemplate = T.unlines
+  [ "---"
+  , "name: tricorder"
+  , "description: Check continuous GHCi build status, compiler errors, warnings, or test results via the background tricorder daemon or MCP server. Use when verifying compilation or checking build diagnostics."
+  , "user-invocable: true"
+  , "---"
+  , ""
+  , "# Checking Build Status with Tricorder"
+  , ""
+  , "Using `tricorder` slashes token burn by >95%: instead of dumping 300+ lines of raw GHC build logs into context (~2,500 tokens), it returns machine-readable JSON diagnostics in <50 tokens."
+  , ""
+  , "## 1. CLI Invocation Fallback"
+  , "```bash"
+  , "tricorder status --json"
+  , "tricorder status --wait --json"
+  , "```"
+  , ""
+  , "## 2. Standard Compilation Fallback"
+  , "```bash"
+  , "cabal build all"
+  , "cabal test all"
+  , "```"
+  ]
+
+-- | Generates `.agents/skills/yamaarashi/SKILL.md`.
+skillYamaarashiTemplate :: Text
+skillYamaarashiTemplate = T.unlines
+  [ "---"
+  , "name: yamaarashi"
+  , "description: Autonomous task packet runner and ASCII Kanban board projection via yamaarashi-exec. Use to execute isolated task packets (yamaarashi-exec run) or check the task ledger (yamaarashi-exec kanban)."
+  , "---"
+  , ""
+  , "# Yamaarashi Flow & Task Packet Execution"
+  , ""
+  , "`yamaarashi-exec` executes structured task packets in isolated Git worktrees, validates code through build and audit gates, initiates repair cycles on errors, logs events to SQLite, and performs fast-forward merges upon completion."
+  , ""
+  , "## 1. Quick Reference Commands"
+  , "| Command | Action |"
+  , "|---|---|"
+  , "| `bin/yamaarashi-exec run <packet>.yaml` | Execute a task packet in an isolated worktree branch. |"
+  , "| `bin/yamaarashi-exec kanban` | Project the current ASCII Kanban state from `.yamaarashi/events.sqlite3`. |"
   ]
 
 --------------------------------------------------------------------------------
