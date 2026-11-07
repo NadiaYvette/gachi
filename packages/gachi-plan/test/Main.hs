@@ -11,9 +11,11 @@ module Main (main) where
 
 import Control.Exception (SomeException, bracket, catch)
 import Control.Monad (forM_)
+import Data.IORef (IORef, atomicModifyIORef', newIORef)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.Time.Clock.POSIX (getPOSIXTime)
+import System.CPUTime (getCPUTime)
 import System.Directory
   ( createDirectoryIfMissing
   , doesDirectoryExist
@@ -21,6 +23,7 @@ import System.Directory
   , removeDirectoryRecursive
   )
 import System.FilePath ((</>))
+import System.IO.Unsafe (unsafePerformIO)
 import Test.Hspec
 
 import Gachi.Plan
@@ -40,19 +43,25 @@ import Gachi.Plan
   , trackGovernedFiles
   )
 
+tempNonce :: IORef Integer
+tempNonce = unsafePerformIO (newIORef 0)
+{-# NOINLINE tempNonce #-}
+
 -- | Helper executing an action within an isolated temporary directory.
 withTempDir :: String -> (FilePath -> IO a) -> IO a
 withTempDir prefix action = do
   base <- getTemporaryDirectory
   t <- getPOSIXTime
-  let dirPath = base </> (prefix ++ "-" ++ show (round (t * 1000) :: Integer))
+  cpu <- getCPUTime
+  n <- atomicModifyIORef' tempNonce (\c -> (c + 1, c + 1))
+  let dirPath = base </> (prefix ++ "-" ++ show (round (t * 1000) :: Integer) ++ "-" ++ show cpu ++ "-" ++ show n)
   bracket
     (createDirectoryIfMissing True dirPath >> pure dirPath)
     (\p -> catch (removeDirectoryRecursive p) (\(_ :: SomeException) -> pure ()))
     action
 
 main :: IO ()
-main = hspec $ do
+main = hspec $ parallel $ do
   describe "Gachi.Plan.Store (Detached Git Store Lifecycle)" $ do
     it "initializes a fresh bare Git store in a temporary directory" $ do
       withTempDir "gachi-plan-init" $ \tmpDir -> do

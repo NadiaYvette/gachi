@@ -14,9 +14,11 @@ module Main (main) where
 
 import Control.Exception (SomeException(..), bracket, catch, try)
 import Control.Monad (forM_)
+import Data.IORef (IORef, atomicModifyIORef', newIORef)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.Time.Clock.POSIX (getPOSIXTime)
+import System.CPUTime (getCPUTime)
 import System.Directory
   ( createDirectoryIfMissing
   , doesFileExist
@@ -27,6 +29,7 @@ import System.Directory
   )
 import System.Exit (ExitCode(..))
 import System.FilePath ((</>))
+import System.IO.Unsafe (unsafePerformIO)
 import System.Process (readProcessWithExitCode)
 import Test.Hspec
 
@@ -38,12 +41,18 @@ import Gachi.Schema.Project
   )
 import Gachi.Scaffold
 
--- | Helper executing an action within an isolated temporary directory.
+tempNonce :: IORef Integer
+tempNonce = unsafePerformIO (newIORef 0)
+{-# NOINLINE tempNonce #-}
+
+-- | Helper executing an action within a concurrency-isolated temporary directory.
 withTempDir :: String -> (FilePath -> IO a) -> IO a
 withTempDir prefix action = do
   base <- getTemporaryDirectory
   t <- getPOSIXTime
-  let dirPath = base </> (prefix ++ "-" ++ show (round (t * 1000) :: Integer))
+  cpu <- getCPUTime
+  n <- atomicModifyIORef' tempNonce (\c -> (c + 1, c))
+  let dirPath = base </> (prefix ++ "-" ++ show (round (t * 1000) :: Integer) ++ "-" ++ show cpu ++ "-" ++ show n)
   bracket
     (createDirectoryIfMissing True dirPath >> pure dirPath)
     (\p -> catch (removeDirectoryRecursive p) (\(SomeException _) -> pure ()))
@@ -67,7 +76,7 @@ gongjuFixture =
        }
 
 main :: IO ()
-main = hspec $ do
+main = hspec $ parallel $ do
   describe "Gachi.Scaffold.Markdown (GFM AST & Pretty-Printing)" $ do
     it "renders headings at appropriate depth levels" $ do
       renderMarkdown [h1 "Level 1", h2 "Level 2", h3 "Level 3", h4 "Level 4"]

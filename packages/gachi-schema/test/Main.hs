@@ -12,7 +12,7 @@ import Data.Text (Text)
 import Gachi.Schema
 
 main :: IO ()
-main = hspec do
+main = hspec $ parallel $ do
   -- Tested against Note [Dhall Parameterized Skeleton Templating] [ref:note-dhall-skeleton-templating]
   describe "Gachi.Schema Nominal Types & Invariants" do
     it "constructs turnkey default projects with canonical ecosystem standards" do

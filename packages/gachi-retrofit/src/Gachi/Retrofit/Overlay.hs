@@ -388,7 +388,7 @@ customVerifyScript pName _ =
     , "verify_tests() {"
     , "  echo \"=== [2/5] Full Cabal Test Suite ===\""
     , "  if [[ -f \"${REPO_ROOT}/cabal.project\" ]] || compgen -G \"${REPO_ROOT}/*.cabal\" > /dev/null; then"
-    , "    (cd \"${REPO_ROOT}\" && cabal test all --test-show-details=streaming)"
+    , "    (cd \"${REPO_ROOT}\" && cabal test all --test-show-details=streaming -j20 --semaphore)"
     , "    echo \"  [+] All test suite assertions PASSED.\""
     , "  else"
     , "    echo \"  [SKIP] No Cabal build manifests found.\""

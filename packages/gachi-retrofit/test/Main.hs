@@ -6,28 +6,49 @@
 -- Description: Comprehensive test suite for gachi-retrofit (Milestone 4.1)
 module Main (main) where
 
-import Control.Exception (SomeException, catch)
+import Control.Exception (SomeException, bracket, catch)
+import Data.IORef (IORef, atomicModifyIORef', newIORef)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import Data.Time.Clock.POSIX (getPOSIXTime)
+import System.CPUTime (getCPUTime)
 import System.Directory
   ( createDirectoryIfMissing
   , doesDirectoryExist
   , doesFileExist
   , getCurrentDirectory
   , getPermissions
+  , getTemporaryDirectory
   , removeDirectoryRecursive
   , setOwnerExecutable
   , setPermissions
   )
 import System.FilePath (takeDirectory, (</>))
+import System.IO.Unsafe (unsafePerformIO)
 import Test.Hspec
 
 import Gachi.Retrofit
 import qualified Penelope.Effects.Binary as Pen
 import Gachi.Schema.Project (Author(..), defaultProject)
 
+tempNonce :: IORef Integer
+tempNonce = unsafePerformIO (newIORef 0)
+{-# NOINLINE tempNonce #-}
+
+withTempDir :: String -> (FilePath -> IO a) -> IO a
+withTempDir prefix action = do
+  base <- getTemporaryDirectory
+  t <- getPOSIXTime
+  cpu <- getCPUTime
+  n <- atomicModifyIORef' tempNonce (\c -> (c + 1, c + 1))
+  let dirPath = base </> (prefix ++ "-" ++ show (round (t * 1000) :: Integer) ++ "-" ++ show cpu ++ "-" ++ show n)
+  bracket
+    (createDirectoryIfMissing True dirPath >> pure dirPath)
+    (\p -> catch (removeDirectoryRecursive p) (\(_ :: SomeException) -> pure ()))
+    action
+
 main :: IO ()
-main = hspec $ do
+main = hspec $ parallel $ do
   describe "Gachi.Retrofit.Diagnostic (Pure Analyzers)" $ do
     it "detects programming language distribution and file percentages" $ do
       let samplePaths =
@@ -209,9 +230,7 @@ main = hspec $ do
       "gachi retrofit inspect [sample]: Haskell, Single-Package Root Layout, Score: 40.0%" `T.isInfixOf` line `shouldBe` True
 
   describe "Gachi.Retrofit (Filesystem Inspection)" $ do
-    it "scans a mock legacy repository and identifies architectural attributes" $ do
-      let tmpDir = "/tmp/gachi-test-legacy-victim"
-      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
+    it "scans a mock legacy repository and identifies architectural attributes" $ withTempDir "gachi-test-legacy-victim" $ \tmpDir -> do
       createDirectoryIfMissing True (tmpDir </> "src")
       createDirectoryIfMissing True (tmpDir </> "test")
 
@@ -229,9 +248,6 @@ main = hspec $ do
       diagDocCompliancePct report `shouldSatisfy` (> 0.0)
       hasGitRepo (diagGitGovernance report) `shouldBe` False
       hasVerifyScript (diagVerificationHarness report) `shouldBe` False
-
-      -- Clean up
-      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
 
     it "executes self-diagnostic scan on the host workspace with high conformance" $ do
       cwd <- getCurrentDirectory
@@ -262,9 +278,7 @@ main = hspec $ do
       all (`elem` paths) ["bin/sample-verify", "bin/sample-tagref", "bin/sample-linkcheck", "bin/sample-cloc"] `shouldBe` True
       all (`elem` paths) [".hlint.yaml", "fourmolu.yaml"] `shouldBe` True
 
-    it "computes overlay plan preserving existing files and proposing missing assets" $ do
-      let tmpDir = "/tmp/gachi-test-overlay-plan"
-      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
+    it "computes overlay plan preserving existing files and proposing missing assets" $ withTempDir "gachi-test-overlay-plan" $ \tmpDir -> do
       createDirectoryIfMissing True (tmpDir </> "src")
       TIO.writeFile (tmpDir </> "README.md") "# Existing README\n"
       TIO.writeFile (tmpDir </> "src" </> "Main.hs") "module Main where\nmain = putStrLn \"hello\"\n"
@@ -284,11 +298,7 @@ main = hspec $ do
       any (\case GitInitRepo -> True; _ -> False) (planGitActions plan) `shouldBe` True
       any (\case GitSetConfig k _ -> k == "core.hooksPath"; _ -> False) (planGitActions plan) `shouldBe` True
 
-      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
-
-    it "executes non-destructive overlay, creates harnesses, configures git, and guarantees idempotency" $ do
-      let tmpDir = "/tmp/gachi-test-overlay-exec"
-      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
+    it "executes non-destructive overlay, creates harnesses, configures git, and guarantees idempotency" $ withTempDir "gachi-test-overlay-exec" $ \tmpDir -> do
       createDirectoryIfMissing True (tmpDir </> "src")
       let origDomainCode = "module Domain where\nsecret = 1337\n"
       TIO.writeFile (tmpDir </> "src" </> "Domain.hs") origDomainCode
@@ -322,10 +332,7 @@ main = hspec $ do
       plan2 <- computeOverlayPlan tmpDir report2
       planCreatedCount plan2 `shouldBe` 0
 
-      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
-
-    it "formats overlay plan and results into human-readable ASCII and Markdown dashboards" $ do
-      let tmpDir = "/tmp/gachi-test-overlay-fmt"
+    it "formats overlay plan and results into human-readable ASCII and Markdown dashboards" $ withTempDir "gachi-test-overlay-fmt" $ \tmpDir -> do
       createDirectoryIfMissing True tmpDir
       report <- scanRepository tmpDir
       plan <- computeOverlayPlan tmpDir report
@@ -342,8 +349,6 @@ main = hspec $ do
       let asciiRes = formatOverlayResult res
       "Gachi Non-Destructive Overlay Execution Results" `T.isInfixOf` asciiRes `shouldBe` True
       "Overlay successfully applied!" `T.isInfixOf` asciiRes `shouldBe` True
-
-      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
 
   describe "Gachi.Retrofit.QualityGate (Progressive Quality Gates)" $ do
     it "constructs pure gate specifications across all four progressive levels (L0-L3)" $ do
@@ -437,9 +442,7 @@ main = hspec $ do
       "| Status | Gate | Description |" `T.isInfixOf` mdOut `shouldBe` True
       "## Level 0: Foundation" `T.isInfixOf` mdOut `shouldBe` True
 
-    it "evaluates quality gates against a live retrofitted workspace" $ do
-      let tmpDir = "/tmp/gachi-test-quality-gate-live"
-      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
+    it "evaluates quality gates against a live retrofitted workspace" $ withTempDir "gachi-test-quality-gate-live" $ \tmpDir -> do
       createDirectoryIfMissing True (tmpDir </> "bin")
       createDirectoryIfMissing True (tmpDir </> ".githooks")
       createDirectoryIfMissing True (tmpDir </> ".git")
@@ -463,8 +466,6 @@ main = hspec $ do
       qgProjectName report `shouldSatisfy` (not . T.null)
       qgPassedCount report `shouldSatisfy` (>= 8)
       length (qgGateResults report) `shouldBe` 14
-
-      removeDirectoryRecursive tmpDir `catch` (\(_ :: SomeException) -> pure ())
 
   describe "Gachi.Retrofit.Pipeline (Penelope Polycategorical Effect System Integration)" $ do
     it "evaluates pure retrofit pipeline simulation via Penelope Rope" $ do

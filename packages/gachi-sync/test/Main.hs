@@ -14,21 +14,26 @@
 -- 6. Forge-tiered CI matrix generation, asymmetric runner allocation, and classification (Milestone 3.3).
 module Main (main) where
 
-import Control.Exception (bracket)
+import Control.Exception (SomeException, bracket, catch)
+import Data.IORef (IORef, atomicModifyIORef', newIORef)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import Data.Time.Clock.POSIX (getPOSIXTime)
+import System.CPUTime (getCPUTime)
 import System.Directory
   ( createDirectoryIfMissing
   , doesFileExist
   , executable
   , getPermissions
+  , getTemporaryDirectory
   , removeDirectoryRecursive
   , setPermissions
   , setOwnerExecutable
   )
 import System.Exit (ExitCode(..))
 import System.FilePath ((</>), takeFileName)
+import System.IO.Unsafe (unsafePerformIO)
 import System.Process (readProcessWithExitCode)
 import Test.Hspec
 
@@ -51,15 +56,22 @@ import Gachi.Sync
 testProject :: Project
 testProject = defaultProject "audit-test" (Author "Test Runner" "test@example.com")
 
+tempNonce :: IORef Integer
+tempNonce = unsafePerformIO (newIORef 0)
+{-# NOINLINE tempNonce #-}
+
 -- | Helper to create a temporary test directory and clean it up after testing.
 withTempDir :: (FilePath -> IO a) -> IO a
-withTempDir = bracket createTemp cleanupTemp
-  where
-    createTemp = do
-      let dir = "dist-newstyle" </> "test-audit-workspace"
-      createDirectoryIfMissing True dir
-      pure dir
-    cleanupTemp = removeDirectoryRecursive
+withTempDir action = do
+  base <- getTemporaryDirectory
+  t <- getPOSIXTime
+  cpu <- getCPUTime
+  n <- atomicModifyIORef' tempNonce (\c -> (c + 1, c + 1))
+  let dirPath = base </> ("gachi-sync-test-" ++ show (round (t * 1000) :: Integer) ++ "-" ++ show cpu ++ "-" ++ show n)
+  bracket
+    (createDirectoryIfMissing True dirPath >> pure dirPath)
+    (\p -> catch (removeDirectoryRecursive p) (\(_ :: SomeException) -> pure ()))
+    action
 
 -- | Helper creating an isolated Git repository in a temporary directory for live remote testing.
 withGitTempDir :: (FilePath -> IO a) -> IO a
@@ -72,7 +84,7 @@ withGitTempDir action = withTempDir $ \baseDir -> do
     else error ("Failed to initialize test git repo: " ++ err)
 
 main :: IO ()
-main = hspec $ do
+main = hspec $ parallel $ do
   describe "Gachi.Sync.Matrix (Standardization Matrix)" $ do
     it "registers all 10 canonical dimensions" $ do
       length canonicalDimensions `shouldBe` 10

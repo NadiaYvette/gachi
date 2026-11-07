@@ -19,7 +19,7 @@ import Gachi.Core.Traversal
 import Gachi.Osteology
 
 main :: IO ()
-main = hspec do
+main = hspec $ parallel $ do
   -- Tested against Note [Chattering Lock-Free Atomic Synchronization] [ref:note-chattering-synchronization]
   describe "Gachi.Core Skeletal Primitives" do
     it "constructs empty skeletal structure with zero bones and joints" do
