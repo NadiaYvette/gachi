@@ -36,7 +36,7 @@ HTML_ID_REGEX = re.compile(r"""(?:id|name)=[\"\']([^\"\']+)[\"\']""", re.IGNOREC
 CODE_SPAN_REGEX = re.compile(r"(`+)(.+?)\1", re.DOTALL)
 
 # External protocols to ignore
-EXTERNAL_SCHEMES = ("http://", "https://", "mailto:", "rad:", "ftp://", "data:", "urn:")
+EXTERNAL_SCHEMES = ("http://", "https://", "mailto:", "rad:", "ftp://", "data:", "urn:", "file://")
 
 def github_slugify(text):
     """
@@ -229,12 +229,12 @@ def collect_markdown_targets(repo_root, explicit_targets):
             text=True,
             stderr=subprocess.DEVNULL
         ).splitlines()
-        return [os.path.join(repo_root, f) for f in git_files if os.path.isfile(os.path.join(repo_root, f))]
+        return [os.path.join(repo_root, f) for f in git_files if os.path.isfile(os.path.join(repo_root, f)) and not f.startswith(".agents/")]
     except Exception:
         # Fallback filesystem scan
         targets = []
         for root, _, files in os.walk(repo_root):
-            if "/.git" in root or "/dist-newstyle" in root:
+            if "/.git" in root or "/dist-newstyle" in root or "/.agents" in root:
                 continue
             for f in files:
                 if f.endswith(".md"):

@@ -6,7 +6,7 @@ user-invocable: true
 
 # Project Context & Search with Contextful
 
-`contextful` provides a local context management and search engine for agentic AI using SQLite FTS5 (BM25 lexical ranking) and tree-sitter AST parsing.
+[`contextful`](file:///home/nyc/src/contextful/) provides a local context management and search engine for agentic AI using SQLite FTS5 (BM25 lexical ranking) and tree-sitter AST parsing.
 
 Instead of reading dozens of files, Contextful indexes the workspace once and returns ranked, cited, token-budgeted **context packs**.
 

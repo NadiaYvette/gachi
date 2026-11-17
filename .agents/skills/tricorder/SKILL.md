@@ -6,13 +6,13 @@ user-invocable: true
 
 # Checking Build Status with Tricorder
 
-`tricorder` maintains a continuous background GHCi daemon that compiles packages in the `cabal.project` workspace incrementally.
+[`tricorder`](file:///home/nyc/src/tricorder/) maintains a continuous background GHCi daemon that compiles packages in the `cabal.project` workspace incrementally.
 
 Using `tricorder` slashes token burn by >95%: instead of dumping 300+ lines of raw GHC build logs into context (~2,500 tokens), it returns machine-readable JSON diagnostics in $<50$ tokens.
 
 ## 1. Using the MCP Server (`tricorder-mcp`)
 
-If the assistant environment supports Model Context Protocol (configured via [`.mcp.json`](../../../.mcp.json) or [`.agents/mcp.json`](../../mcp.json)):
+If the assistant environment supports Model Context Protocol (configured via [`.mcp.json`](../../.mcp.json) or [`.agents/mcp.json`](../mcp.json)):
 
 - **`status`**: Query current compiler errors, warnings, and diagnostics. Pass `wait: true` to block until in-progress compilation finishes.
 - **`test_results`**: Query the latest test execution results. Pass `failed: true` to see only failing suites.
