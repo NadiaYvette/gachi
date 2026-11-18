@@ -47,6 +47,7 @@ module Gachi.Scaffold.Templates
   , tagrefScriptTemplate
   , linkcheckScriptTemplate
   , clocScriptTemplate
+  , hackageScriptTemplate
   , generateTagsTemplate
 
     -- * Operational Governance Templates
@@ -384,7 +385,7 @@ preCommitHookTemplate proj =
 --------------------------------------------------------------------------------
 
 -- | Synthesizes executable scripts under @bin/@:
--- @<name>-verify@, @<name>-tagref@, @<name>-linkcheck@, @<name>-cloc@, and @generate-tags@.
+-- @<name>-verify@, @<name>-tagref@, @<name>-linkcheck@, @<name>-cloc@, @<name>-hackage@, and @generate-tags@.
 verificationHarnessEntries :: Project -> [FileEntry]
 verificationHarnessEntries proj =
   let pName = T.unpack (projectName proj)
@@ -392,6 +393,7 @@ verificationHarnessEntries proj =
      , FileEntry ("bin/" <> pName <> "-tagref") (tagrefScriptTemplate proj) True
      , FileEntry ("bin/" <> pName <> "-linkcheck") (linkcheckScriptTemplate proj) True
      , FileEntry ("bin/" <> pName <> "-cloc") (clocScriptTemplate proj) True
+     , FileEntry ("bin/" <> pName <> "-hackage") (hackageScriptTemplate proj) True
      , FileEntry "bin/generate-tags" generateTagsTemplate True
      ]
 
@@ -452,7 +454,7 @@ verifyScriptTemplate proj =
     , "}"
     , ""
     , "verify_cloc() {"
-    , "  echo \"=== [5/5] CLOC Comment Density Gate ===\""
+    , "  echo \"=== [5/6] CLOC Comment Density Gate ===\""
     , "  if [[ -x \"${REPO_ROOT}/bin/" <> pName <> "-cloc\" ]]; then"
     , "    local cloc_out"
     , "    cloc_out=\"$(\"${REPO_ROOT}/bin/" <> pName <> "-cloc\" --quiet --check)\""
@@ -462,13 +464,82 @@ verifyScriptTemplate proj =
     , "  fi"
     , "}"
     , ""
+    , "verify_hackage() {"
+    , "  echo \"=== [6/6] Hackage Distribution & Cabal Check Gate ===\""
+    , "  if [[ -x \"${REPO_ROOT}/bin/" <> pName <> "-hackage\" ]]; then"
+    , "    \"${REPO_ROOT}/bin/" <> pName <> "-hackage\""
+    , "  else"
+    , "    local failed=0"
+    , "    for cabal_file in \"${REPO_ROOT}\"/packages/*/*.cabal; do"
+    , "      if [[ -f \"${cabal_file}\" ]]; then"
+    , "        local pkg_dir"
+    , "        pkg_dir=\"$(dirname \"${cabal_file}\")\""
+    , "        local check_out"
+    , "        check_out=\"$(cd \"${pkg_dir}\" && cabal check 2>&1 || true)\""
+    , "        if echo \"${check_out}\" | grep -qE \"Warning:|Error:\"; then"
+    , "          echo \"  [-] Hackage compliance warning in ${pkg_dir}:\""
+    , "          echo \"${check_out}\" | sed 's/^/      /'"
+    , "          failed=1"
+    , "        fi"
+    , "      fi"
+    , "    done"
+    , "    if [[ ${failed} -eq 0 ]]; then"
+    , "      echo \"  [+] All package manifests passed cabal check with 0 warnings.\""
+    , "    else"
+    , "      return 1"
+    , "    fi"
+    , "  fi"
+    , "}"
+    , ""
     , "verify_hlint"
     , "verify_tests"
     , "verify_tagref"
     , "verify_linkcheck"
     , "verify_cloc"
+    , "verify_hackage"
     , ""
-    , "echo \"=== All 5 Physical Verification Checks PASSED ===\""
+    , "echo \"=== All 6 Physical Verification & Hackage Checks PASSED ===\""
+    ]
+
+-- | Generates @bin/<name>-hackage@ validating strict Hackage upload compliance via cabal check.
+hackageScriptTemplate :: Project -> Text
+hackageScriptTemplate proj =
+  let pName = projectName proj
+  in T.unlines
+    [ "#!/usr/bin/env bash"
+    , "# bin/" <> pName <> "-hackage — Cabal Check and Hackage Readiness Auditor"
+    , "set -euo pipefail"
+    , ""
+    , "SCRIPT_DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\""
+    , "REPO_ROOT=\"$(cd \"${SCRIPT_DIR}/..\" && pwd)\""
+    , ""
+    , "echo \"=== Hackage Distribution Audit across " <> pName <> " packages ===\""
+    , "failed=0"
+    , "count=0"
+    , "for cabal_file in \"${REPO_ROOT}\"/packages/*/*.cabal; do"
+    , "  if [[ -f \"${cabal_file}\" ]]; then"
+    , "    pkg_dir=\"$(dirname \"${cabal_file}\")\""
+    , "    pkg_name=\"$(basename \"${pkg_dir}\")\""
+    , "    ((count++))"
+    , "    check_out=\"$(cd \"${pkg_dir}\" && cabal check 2>&1 || true)\""
+    , "    if echo \"${check_out}\" | grep -qE \"Warning:|Error:\"; then"
+    , "      echo \"  [-] ${pkg_name}: NON-COMPLIANT\""
+    , "      echo \"${check_out}\" | sed 's/^/      /'"
+    , "      failed=1"
+    , "    else"
+    , "      echo \"  [+] ${pkg_name}: Hackage compliant (0 warnings)\""
+    , "    fi"
+    , "  fi"
+    , "done"
+    , "if [[ ${count} -eq 0 ]]; then"
+    , "  echo \"  [!] No packages found under packages/*\""
+    , "  exit 1"
+    , "fi"
+    , "if [[ ${failed} -ne 0 ]]; then"
+    , "  echo \"[-] Hackage compliance audit FAILED.\""
+    , "  exit 1"
+    , "fi"
+    , "echo \"[+] All ${count} packages are ready for Hackage upload.\""
     ]
 
 -- | Generates @bin/<name>-tagref@ cross-reference validation script with Python fallback.

@@ -142,6 +142,7 @@ main = hspec $ parallel $ do
         , "bin/gongju-tagref"
         , "bin/gongju-linkcheck"
         , "bin/gongju-cloc"
+        , "bin/gongju-hackage"
         , "bin/generate-tags"
         ]
       let binEntries = filter (\e -> take 4 (entryPath e) == "bin/") entries

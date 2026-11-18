@@ -92,6 +92,7 @@ module Gachi.Scaffold
   , tagrefScriptTemplate
   , linkcheckScriptTemplate
   , clocScriptTemplate
+  , hackageScriptTemplate
   , generateTagsTemplate
   , readmeTemplate
   , agentsTemplate
@@ -198,6 +199,7 @@ import Gachi.Scaffold.Templates
   , docsTutorialTemplate
   , generateTagsTemplate
   , gitmessageTemplate
+  , hackageScriptTemplate
   , hlintTemplate
   , linkcheckScriptTemplate
   , moduleToFilePath
