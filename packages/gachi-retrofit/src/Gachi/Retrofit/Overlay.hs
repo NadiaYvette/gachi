@@ -410,7 +410,7 @@ customVerifyScript pName _ =
     , "}"
     , ""
     , "verify_linkcheck() {"
-    , "  echo \"=== [4/5] Markdown Link & Anchor Integrity Gate ==="
+    , "  echo \"=== [4/5] Markdown Link & Anchor Integrity Gate ===\""
     , "  if [[ -x \"${REPO_ROOT}/bin/" <> pName <> "-linkcheck\" ]]; then"
     , "    local linkcheck_out"
     , "    linkcheck_out=\"$(\"${REPO_ROOT}/bin/" <> pName <> "-linkcheck\" --quiet)\""
